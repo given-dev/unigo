@@ -1,0 +1,52 @@
+/* ==========================================================================
+   UniGo - Icon system
+   Zero dependency inline SVG sprite. Markup is written as
+   <i class="icon" data-icon="bus">bus</i> (or with the name as text) and
+   app.js swaps it for <svg class="icon"><use href="#i-bus"></use></svg>.
+   Strokes are inherited, so `color` on any ancestor themes the glyph.
+   ========================================================================== */
+
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  vertical-align: -.125em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+
+/* If JavaScript is unavailable the glyph name would render as a word, so the
+   text is hidden. Icons simply disappear rather than leaking "bus" onto the
+   page. */
+.no-js .icon { font-size: 0; line-height: 0; }
+
+/* The sprite itself must never take up space. */
+.icon-sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+}
+
+/* Icons whose fill should be solid (toggles, active tabs, ratings). */
+.icon--fill { fill: currentColor; stroke: none; }
+
+/* Sizes */
+.icon--xs { width: 12px; height: 12px; stroke-width: 2.5; }
+.icon--sm { width: 14px; height: 14px; }
+.icon--md { width: 18px; height: 18px; }
+.icon--lg { width: 22px; height: 22px; }
+.icon--xl { width: 32px; height: 32px; stroke-width: 1.75; }
+
+/* Animate a spinner glyph (used by loading buttons). */
+.icon--spin { animation: unigo-spin 900ms linear infinite; }
+@keyframes unigo-spin { to { transform: rotate(360deg); } }
+
+/* Leaflet renders the same glyphs inside map popups. */
+.leaflet-popup .icon { vertical-align: -.15em; }

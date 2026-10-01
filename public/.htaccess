@@ -1,0 +1,36 @@
+# UniGo - Apache front controller rules.
+#
+# Every request that does not map to a real file or directory is handed
+# to public/index.php. Static assets (css, js, images, manifest, service
+# worker) are served directly by Apache.
+
+Options -Indexes -MultiViews
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Serve existing files and directories untouched.
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Everything else is routed through the front controller.
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Block hidden files (.git, .env, editor swap files).
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# Send PHP errors to the log, never to the browser.
+<IfModule mod_php.c>
+    php_flag display_errors off
+</IfModule>

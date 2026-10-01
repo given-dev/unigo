@@ -1,0 +1,20 @@
+# Normalise text files to LF in the repository; checkouts follow the platform.
+* text=auto
+
+# Binary assets are never line-ending converted or diffed.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.svg  text
+*.woff  binary
+*.woff2 binary
+
+*.php text eol=lf
+*.css text eol=lf
+*.js  text eol=lf
+*.json text eol=lf
+*.sql text eol=lf
+*.md  text eol=lf

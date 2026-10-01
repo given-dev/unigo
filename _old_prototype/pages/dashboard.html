@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - UniGo</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <header>
+        <nav class="navbar">
+            <div class="logo">
+                <h1>UniGo</h1>
+                <span>Smart Commute & Transit</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="../index.html">Home</a></li>
+                <li><a href="dashboard.html" class="active">Dashboard</a></li>
+                <li><a href="login.html">Logout</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main class="dashboard">
+        <h1>Welcome to UniGo Dashboard</h1>
+
+        <div class="dashboard-grid">
+            <div class="card">
+                <h3>Find a Ride</h3>
+                <form id="ride-search-form" class="ride-match-form">
+                    <div class="form-group">
+                        <label>From</label>
+                        <input type="text" id="origin" placeholder="Enter origin" required>
+                    </div>
+                    <div class="form-group">
+                        <label>To</label>
+                        <input type="text" id="destination" placeholder="Enter destination" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Search Rides</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h3>Live Vehicle Tracking</h3>
+                <div id="tracking-map" style="height: 300px; border-radius: 8px;"></div>
+            </div>
+
+            <div class="card">
+                <h3>Available Rides</h3>
+                <div id="ride-results" class="match-results">
+                    <p>Search for rides to see results</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>My Bookings</h3>
+                <div id="my-bookings">
+                    <p>No bookings yet</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 UniGo - Kyambogo University | Bachelor of Information Systems</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="../js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('tracking-map')) {
+                const trackingMap = L.map('tracking-map').setView([0.3476, 32.5825], 13);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap contributors'
+                }).addTo(trackingMap);
+                map = trackingMap;
+                startTracking();
+            }
+        });
+    </script>
+</body>
+</html>

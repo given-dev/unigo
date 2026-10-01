@@ -1,0 +1,38 @@
+# ---------------------------------------------------------------------------
+# UniGo - ignore rules
+# ---------------------------------------------------------------------------
+
+# Runtime logs. These contain SQL fragments, IPs and session identifiers and
+# must never be committed.
+storage/logs/*
+!storage/logs/.gitkeep
+
+# Generated cache / compiled artefacts.
+storage/cache/*
+!storage/cache/.gitkeep
+
+# User-uploaded files (avatars, operator documents).
+public/uploads/*
+!public/uploads/avatars/.gitkeep
+!public/uploads/operators/.gitkeep
+
+# Local environment overrides. Note: config/config.php reads real environment
+# variables via getenv(), so .env files are not parsed by the application.
+.env
+.env.*
+!.env.example
+
+# Editor and OS noise.
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+Thumbs.db
+.DS_Desktop.ini
+desktop.ini
+
+# Dependency / tool directories that do not belong in this repository.
+node_modules/
+vendor/
+.phpunit.result.cache

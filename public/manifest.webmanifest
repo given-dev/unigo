@@ -1,0 +1,50 @@
+{
+  "name": "UniGo - Integrated Smart Transport System",
+  "short_name": "UniGo",
+  "description": "Book, track and manage passenger transport, deliveries and fleet operations in one platform.",
+  "start_url": "./",
+  "scope": "./",
+  "id": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "orientation": "portrait-primary",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["travel", "business", "productivity", "navigation"],
+  "icons": [
+    {
+      "src": "assets/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/img/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Find a trip",
+      "short_name": "Search",
+      "description": "Search upcoming trips",
+      "url": "./trips/search"
+    },
+    {
+      "name": "My bookings",
+      "short_name": "Bookings",
+      "description": "Open your tickets",
+      "url": "./bookings"
+    },
+    {
+      "name": "Report emergency",
+      "short_name": "SOS",
+      "description": "Raise an emergency alert",
+      "url": "./emergency/new"
+    }
+  ]
+}

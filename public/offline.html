@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0F172A">
+    <title>Offline - UniGo</title>
+    <link rel="stylesheet" href="assets/css/unigo.css">
+    <link rel="stylesheet" href="assets/css/icons.css">
+    <link rel="stylesheet" href="assets/css/layout.css">
+    <link rel="icon" type="image/svg+xml" href="assets/img/favicon.svg">
+</head>
+<body>
+<div class="auth" style="min-height:100vh">
+    <main class="auth__main" style="grid-column:1/-1">
+        <div class="auth__card text-center">
+            <span class="sidebar__logo" aria-hidden="true" style="background:linear-gradient(135deg,#2563EB,#60A5FA);color:#fff;margin:0 auto var(--sp-4)">U</span>
+            <h1 class="text-xl" style="color:var(--secondary)">You are offline</h1>
+            <p class="text-muted-2 mt-2">
+                UniGo needs a network connection for live schedules, tracking and payments.
+                Anything you already loaded is still available.
+            </p>
+            <button class="btn btn--primary mt-5" type="button" onclick="window.location.reload()">
+                Retry connection
+            </button>
+            <p class="text-xs text-muted-2 mt-4">
+                In an emergency call <strong>911</strong>. Simulated data environment.
+            </p>
+        </div>
+    </main>
+</div>
+</body>
+</html>

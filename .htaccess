@@ -1,0 +1,16 @@
+# UniGo - application root rules.
+#
+# The document root is one level above this project, so Apache serves this
+# directory directly. This file keeps the non-public parts of the project off
+# the web. The bare directory URL is handled by index.php in this folder,
+# which forwards to the real front controller in public/.
+
+DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # src/, config/, database/, storage/ and the retired prototype must never be
+    # reachable over HTTP. Patterns are relative to this directory.
+    RewriteRule ^(src|config|database|storage|scripts|_old_prototype)(/|$) - [F,L]
+</IfModule>
