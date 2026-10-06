@@ -67,13 +67,21 @@ Open `http://127.0.0.1:8000`. This is a development server. Register your own ac
 
 The public document root is `public/`. Keep configuration, source, database scripts, and storage outside the web document root in production.
 
+Vehicle photos are validated by detected MIME type (JPEG, PNG or WebP) and a 2 MB limit (the `uploads` block in `config/config.php`), stored under `public/uploads/vehicles/<vehicle_id>/` with random filenames, and only rows in the `vehicle_images` table are ever displayed. `public/uploads/` is git-ignored and must be writable by the PHP user; include it in backups because the database stores paths, not the image bytes.
+
 ## Account sessions
 
 Sign out uses a CSRF-protected POST, clears the authenticated session and remembered sign-in tokens, and returns to the homepage with confirmation. Opening `/logout` only displays a confirmation form. Protected pages require a fresh sign-in after logout or expiry; account suspension, deactivation and role changes are checked on every request. Changing a password invalidates other sessions and remembered tokens while retaining the current session.
 
 Dynamic pages use `no-store`. Restoring a page with Back or returning to another tab rechecks session state so an old dashboard or form is refreshed. Password changes use the same minimum strength rules as registration. Profile edits validate names, phone, gender and calendar dates, and optional birth dates can be cleared.
 
-For an existing local clone, update the files with `git pull --ff-only origin main`. An update does not require reimporting the database or rerunning the demo seeder. Do not reimport `schema.sql` into a database containing data you want to keep.
+For an existing local clone, update the files with `git pull --ff-only origin main`, then apply any migration script the update adds. The current one is:
+
+```bat
+C:\xampp\php\php.exe scripts\migrate-vehicle-images.php
+```
+
+It adds the `vehicle_images` table used by vehicle photo uploads and is safe to re-run. An update does not require reimporting the database or rerunning the demo seeder. Do not reimport `schema.sql` into a database containing data you want to keep.
 
 ## Optional test mode
 
@@ -97,13 +105,15 @@ All seeded accounts use password `UniGo@2026`:
 
 The homepage shows approved travel companies from the database, active routes, and a search form for departure, destination, travel date, and company. Guests can browse available trips. Selecting a seat requires sign-in; login or registration returns the user to their selected trip. Company links show upcoming departures over the next 30 days when no date is chosen. Date searches use the selected day. Route matching respects direction and intermediate-stop order.
 
-The interface uses a green and white theme, company cards, cleaner search/result panels, and layouts for smaller screens.
+Operators and administrators photograph their buses and taxis from the Vehicles workspace (JPG, PNG or WebP up to 2 MB, maximum eight photos per vehicle). Trip search cards show the vehicle's cover photo, and the trip detail page shows the full gallery with the registration number, so passengers can recognise the right vehicle when it arrives.
+
+The interface uses a navy and electric blue theme with glass and gradient styling: a gradient top navigation bar on desktop (a drawer and bottom navigation on phones), company cards, cleaner search/result panels, and layouts for smaller screens.
 
 ## Workspaces
 
 - Passenger: registration, trip search, seat selection, segment fares, cash receipts, cancellation/refunds, tracking, parcel requests, notifications, complaints, emergencies, and ratings.
-- Admin: account creation/status, operator approval, fleet/driver/route creation and status, scheduling/dispatch, bookings, parcel assignment, payment ledger, emergency and complaint handling, rating visibility, audit, reports, settings.
-- Operator: own fleet, drivers, routes, trips, manifests, bookings, revenue reports, company settings.
+- Admin: account creation/status, operator approval, fleet/driver/route creation and status, vehicle photo upload/removal, scheduling/dispatch, bookings, parcel assignment, payment ledger, emergency and complaint handling, rating visibility, audit, reports, settings.
+- Operator: own fleet and vehicle photos, drivers, routes, trips, manifests, bookings, revenue reports, company settings.
 - Driver: assigned trips, passenger boarding, trip lifecycle, assigned parcels, phone GPS reporting, ratings and emergency records. Earnings displays passenger fares on assigned trips; payouts and commissions are not calculated.
 - Authority: network positions, operator approvals, emergency and complaint handling, trip/revenue reports.
 
@@ -117,7 +127,7 @@ Simulated positions are excluded from normal tracking, including the location tr
 
 Password-reset email delivery, SMS, USSD, automatic police dispatch, production payment integrations, hardware GPS, and regulatory verification require providers or operational processes. The current password-reset page explicitly directs users to support and does not claim an email was sent.
 
-Fleet/route creation and status changes are supported; editing seat layouts, intermediate stops, route geometry, and existing trip scheduling remains a future extension. New routes can include origin and destination coordinates in the staff form.
+Fleet creation, status changes, and vehicle photo uploads are supported; editing seat layouts, intermediate stops, route geometry, and existing trip scheduling remains a future extension. New routes can include origin and destination coordinates in the staff form.
 
 ## Tests
 
@@ -160,8 +170,10 @@ Also run `node tests/confirmation.cjs` and `node tests/maps.cjs` with the same `
 ## Layout
 
 - `public/`: front controller, CSS, JavaScript, service worker.
+- `public/uploads/`: operator-uploaded vehicle photos (git-ignored, created by the upload flow).
 - `src/core/`: routing, sessions, validation, database, responses.
 - `src/controllers/`, `src/models/`, `src/services/`, `src/views/`: application.
 - `database/`: schema and demo seed.
 - `scripts/router.php`: PHP development-server routing.
+- `scripts/migrate-vehicle-images.php`: adds the `vehicle_images` table to an existing database; safe to re-run.
 - `_old_prototype/`: retired prototype, not part of the current application.
