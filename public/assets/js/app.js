@@ -570,6 +570,9 @@
         });
         document.addEventListener('submit', function (ev) {
             var form = ev.target;
+            // Confirmation may have paused this submission. Only mark a form
+            // busy once its submit event will actually proceed.
+            if (ev.defaultPrevented) return;
             if (form.dataset.busy === '1') { ev.preventDefault(); return; }
             form.dataset.busy = '1';
             var btn = form.querySelector('[type=submit]');
