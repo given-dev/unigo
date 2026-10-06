@@ -51,7 +51,7 @@ spl_autoload_register(static function (string $class): void {
     ];
 
     if (isset($classmap[$class])) {
-        require SRC_PATH . '/' . $classmap[$class];
+        require_once SRC_PATH . '/' . $classmap[$class];
         return;
     }
 

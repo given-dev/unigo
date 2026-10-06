@@ -106,7 +106,7 @@ final class BookingModel extends BaseModel
                 'seat_number' => $seat['seat_number'],
                 'seat_type'   => $seat['seat_type'],
                 'row_number'  => (int) $seat['row_number'],
-                'is_available' => $seat['booking_id'] === null,
+                'is_available' => (bool) $seat['is_active'] && $seat['booking_id'] === null,
                 'is_mine'     => $seat['passenger_id'] !== null && (int) $seat['passenger_id'] === $passengerUserId,
                 'status'      => $seat['booking_status'],
             ];
@@ -119,7 +119,7 @@ final class BookingModel extends BaseModel
             $taken = array_column($result['bookings'], 'seat_number');
             $shared = ($trip['vehicle_type'] === 'shared_ride');
             for ($i = 1; $i <= (int) $trip['capacity']; $i++) {
-                $label = $shared ? 'SHARED' : (string) $i;
+                $label = (string) $i;
                 $out[] = [
                     'seat_number'  => $label,
                     'seat_type'    => 'standard',
@@ -154,6 +154,9 @@ final class BookingModel extends BaseModel
         $passengerId = (int) $data['passenger_id'];
         $seat = strtoupper(trim((string) $data['seat_number']));
         $payMethod = $data['payment_method'] ?? 'mobile_money';
+        if (!in_array($payMethod, ['mobile_money', 'card', 'wallet', 'cash'], true)) {
+            throw new ValidationException('Choose a valid payment method.');
+        }
         $isSimulated = (int) ($data['is_simulated'] ?? 0);
 
         $db = $this->db;
@@ -162,11 +165,12 @@ final class BookingModel extends BaseModel
 
             // 1. Lock the trip row so availability cannot change mid-transaction.
             $trip = $db->first(
-                'SELECT t.*, r.name AS route_name, r.base_fare, v.capacity, v.vehicle_type,
+                'SELECT t.*, r.name AS route_name, r.base_fare, r.status AS route_status, v.status AS vehicle_status, o.approval_status, v.capacity, v.vehicle_type,
                         v.registration_number
                  FROM trips t
                  INNER JOIN routes r ON r.id = t.route_id
                  INNER JOIN vehicles v ON v.id = t.vehicle_id
+                 LEFT JOIN operators o ON o.id = t.operator_id
                  WHERE t.id = ?
                  FOR UPDATE',
                 [$tripId]
@@ -175,10 +179,13 @@ final class BookingModel extends BaseModel
             if (!$trip) {
                 throw new \App\Core\NotFoundException('That trip is no longer available.');
             }
+            if ($trip['route_status'] !== 'active' || !in_array($trip['vehicle_status'], ['active','on_trip'], true) || ($trip['operator_id'] && $trip['approval_status'] !== 'approved')) {
+                throw new ConflictException('This trip is currently unavailable for booking.');
+            }
             if ($trip['status'] !== 'scheduled' && $trip['status'] !== 'boarding') {
                 throw new ConflictException('This trip is not open for booking.');
             }
-            if (strtotime((string) $trip['departure_time']) < time() - 1800) {
+            if (strtotime((string) $trip['departure_time']) <= time()) {
                 throw new ConflictException('This trip has already departed.');
             }
 
@@ -202,10 +209,14 @@ final class BookingModel extends BaseModel
                 );
                 if (!$seatRow) {
                     // fall back to the capacity check for vehicles without a layout
-                    if (!is_numeric($seat) || (int) $seat < 1 || (int) $seat > $capacity) {
+                    if ($db->exists('SELECT 1 FROM seats WHERE vehicle_id = ? LIMIT 1', [(int) $trip['vehicle_id']]) || !ctype_digit($seat) || (string) (int) $seat !== $seat || (int) $seat < 1 || (int) $seat > $capacity) {
                         throw new ValidationException('Seat ' . e($seat) . ' does not exist on this vehicle.');
                     }
                 }
+            }
+
+            if ($isShared && (!ctype_digit($seat) || (string) (int) $seat !== $seat || (int) $seat < 1 || (int) $seat > $capacity)) {
+                throw new ValidationException('Choose an available seat.');
             }
 
             // 4. Capacity / double-booking guard.
@@ -227,15 +238,36 @@ final class BookingModel extends BaseModel
                 throw new ConflictException('That seat has already been booked. Please choose another seat.');
             }
 
-            // 5. Fare: trip fare, or step fare when specific stops are chosen.
+            // Validate both stops against this route and charge the travelled segment.
             $fare = (float) $trip['fare'];
-            if (!empty($data['to_stop_id'])) {
-                $stop = $db->first('SELECT fare_from_origin FROM route_stops WHERE id = ? AND route_id = ?', [
-                    (int) $data['to_stop_id'], (int) $trip['route_id'],
-                ]);
-                if ($stop && (float) $stop['fare_from_origin'] > 0) {
-                    $fare = (float) $stop['fare_from_origin'];
+            $from = null;
+            $to = null;
+            foreach (['from_stop_id', 'to_stop_id'] as $key) {
+                if (!empty($data[$key])) {
+                    $stop = $db->first('SELECT * FROM route_stops WHERE id = ? AND route_id = ?', [(int) $data[$key], (int) $trip['route_id']]);
+                    if (!$stop) {
+                        throw new ValidationException('Choose stops on this route.');
+                    }
+                    if ($key === 'from_stop_id') {
+                        if (!(bool) $stop['is_pickup_point']) {
+                            throw new ValidationException('This stop does not allow boarding.');
+                        }
+                        $from = $stop;
+                    } else {
+                        $to = $stop;
+                    }
                 }
+            }
+            if ($from && $to && (int) $from['stop_order'] >= (int) $to['stop_order']) {
+                throw new ValidationException('The drop-off stop must come after the boarding stop.');
+            }
+            if ($from || $to) {
+                $startFare = $from ? (float) $from['fare_from_origin'] : 0;
+                $endFare = $to ? (float) $to['fare_from_origin'] : $fare;
+                $fare = $endFare - $startFare;
+            }
+            if ($fare <= 0) {
+                throw new ValidationException('This route segment does not have a valid fare.');
             }
 
             $reference = ReferenceGenerator::generate('booking');
@@ -278,14 +310,17 @@ final class BookingModel extends BaseModel
                     ['booking_id' => $bookingId],
                     $actorId
                 );
+                if (($payment['status'] ?? '') !== 'successful') {
+                    throw new ConflictException((string) ($payment['message'] ?? 'Payment failed. Please try another method.'));
+                }
                 if (($payment['status'] ?? '') === 'successful') {
                     $db->update('bookings', ['payment_status' => 'paid'], 'id = ?', [$bookingId]);
-                    $this->db->update('passengers', [
-                        'total_bookings' => (int) $passengerId,
-                    ], 'user_id = ?', [$passengerId]);
+
                 }
             }
 
+            $db->run('UPDATE passengers SET total_bookings = total_bookings + 1 WHERE user_id = ?', [$passengerId]);
+            NotificationService::push($passengerId, 'booking', 'Booking confirmed', 'Your booking ' . $reference . ' is confirmed.', '/bookings/' . $bookingId);
             $booking = $this->findDetailed($bookingId);
 
             ActivityLog::record(

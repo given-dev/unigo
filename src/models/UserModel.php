@@ -74,7 +74,7 @@ final class UserModel extends BaseModel
      * Create a user together with its role(s) and profile row in one
      * transaction so a half-created account can never exist.
      */
-    public function createUser(array $data, array $roles, array $profile = [], array $profileTable = []): int
+    public function createUser(array $data, array $roles, array $profile = [], string $profileTable = ''): int
     {
         return $this->db->transaction(function () use ($data, $roles, $profile, $profileTable): int {
             $userId = $this->create(array_merge([
@@ -85,7 +85,7 @@ final class UserModel extends BaseModel
                 'phone'         => $data['phone'] ?? '',
                 'national_id'   => $data['national_id'] ?? '',
                 'status'        => $data['status'] ?? 'active',
-                'email_verified_at' => $data['status'] ?? 'active' === 'active' ? date('Y-m-d H:i:s') : null,
+                'email_verified_at' => null,
                 'must_change_password' => (int) ($data['must_change_password'] ?? 0),
             ], isset($data['last_login_at']) ? [] : []));
 

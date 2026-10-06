@@ -72,6 +72,23 @@
         this.inputName = el.getAttribute('data-input') || 'seats[]';
         this.selected = parseList(el.getAttribute('data-selected'));
         this.render();
+        var self = this;
+        var form = this.el.closest('form');
+        if (form) {
+            var baseFare = this.basePrice;
+            ['from_stop_id','to_stop_id'].forEach(function (name) {
+                var input = form.querySelector('[name="' + name + '"]');
+                if (!input) return;
+                input.addEventListener('change', function () {
+                    var from = form.querySelector('[name="from_stop_id"]');
+                    var to = form.querySelector('[name="to_stop_id"]');
+                    var start = from && from.value ? parseFloat(from.options[from.selectedIndex].dataset.fare || '0') : 0;
+                    var end = to && to.value ? parseFloat(to.options[to.selectedIndex].dataset.fare || '0') : baseFare;
+                    self.basePrice = Math.max(0, end - start);
+                    self.sync();
+                });
+            });
+        }
     }
 
     SeatMap.prototype.isPremium = function (seat) {
@@ -192,7 +209,7 @@
         var form = this.el.closest('form');
 
         // Hidden inputs - one per selected seat for a normal POST array.
-        this.el.querySelectorAll('[data-seat-input]').forEach(function (n) { n.parentNode.removeChild(n); });
+        (form || this.el).querySelectorAll('[data-seat-input]').forEach(function (n) { n.parentNode.removeChild(n); });
         var name = this.inputName.replace(/\[\]$/, '');
         seats.forEach(function (seat) {
             var input = document.createElement('input');

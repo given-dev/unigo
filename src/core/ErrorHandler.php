@@ -88,7 +88,7 @@ final class ErrorHandler
             Response::error(
                 'Something went wrong. Please try again.',
                 500,
-                Config::isDebug() ? ['exception' => get_class($e), 'message' => $e->getMessage(), 'line' => $e->getLine()] : null
+                Config::isDebug() ? ['exception' => get_class($e), 'message' => $e->getMessage(), 'line' => $e->getLine()] : []
             )->send();
             return;
         }

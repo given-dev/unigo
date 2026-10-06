@@ -27,6 +27,7 @@ $map = [
             ['path' => '/deliveries',               'label' => 'My parcels',  'icon' => 'package'],
         ]],
         ['label' => 'Account', 'items' => [
+            ['path' => '/ratings', 'label' => 'My ratings', 'icon' => 'star'],
             ['path' => '/complaints', 'label' => 'My complaints', 'icon' => 'message'],
             ['path' => '/support',    'label' => 'Help & support', 'icon' => 'headset'],
             ['path' => '/profile',    'label' => 'My profile',     'icon' => 'user'],

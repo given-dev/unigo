@@ -9,6 +9,7 @@ DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+    RewriteRule (^|/)\. - [F,L]
 
     # src/, config/, database/, storage/ and the retired prototype must never be
     # reachable over HTTP. Patterns are relative to this directory.

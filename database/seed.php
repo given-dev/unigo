@@ -110,7 +110,7 @@ function row(string $table, array $data): array
 
     if (!isset($notNull[$table])) {
         $columns = Database::instance()->select(
-            "SELECT column_name FROM information_schema.columns
+            "SELECT column_name AS column_name FROM information_schema.columns
               WHERE table_schema = DATABASE() AND table_name = ?
                 AND is_nullable = 'NO' AND extra NOT LIKE '%auto_increment%'",
             [$table]
@@ -701,7 +701,7 @@ try {
                     ? '+256***' . substr($phone, -3)
                     : '****' . rnd(1000, 9999),
                 'status'       => $paymentStatus === 'refunded' ? 'refunded' : 'successful',
-                'refunded_amount' => $paymentStatus === 'refunded' ? $fare : null,
+                'refunded_amount' => $paymentStatus === 'refunded' ? $fare : 0,
                 'is_mock'      => 1,
                 'initiated_by' => $userId,
                 'created_at'   => dt('-2 weeks'),

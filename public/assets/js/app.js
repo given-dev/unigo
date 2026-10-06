@@ -620,10 +620,11 @@
             var minChars = parseInt(input.getAttribute('data-suggest-min') || '2', 10);
             var hidden = input.getAttribute('data-suggest-value') ? document.querySelector(input.getAttribute('data-suggest-value')) : null;
             var active = -1;
+            var suggestItems = [];
 
             function render(items) {
                 active = -1;
-                UniGo.suggestCache = items;
+                suggestItems = items;
                 if (!items.length) {
                     box.innerHTML = '<div class="suggest__empty">No matches found</div>';
                     box.classList.add('is-open');
@@ -682,7 +683,7 @@
                 if (!item) return;
                 ev.preventDefault();
                 var index = parseInt(item.getAttribute('data-index'), 10);
-                var payload = UniGo.suggestCache && UniGo.suggestCache[index];
+                var payload = suggestItems[index];
                 pickedByMouse = true;
                 window.setTimeout(function () { pickedByMouse = false; }, 200);
                 if (payload) choose(payload);
@@ -692,7 +693,7 @@
                 var item = ev.target.closest('.suggest__item');
                 if (!item) return;
                 var index = parseInt(item.getAttribute('data-index'), 10);
-                var payload = UniGo.suggestCache && UniGo.suggestCache[index];
+                var payload = suggestItems[index];
                 if (payload) choose(payload);
             });
         });
@@ -925,6 +926,10 @@
         setupConnectivity();
         setupCountdowns();
         setupPolls();
+        if (UniGo.qs('[data-unread]')) {
+            refreshBadges();
+            window.setInterval(refreshBadges, 30000);
+        }
         setupSwap();
         setupServiceWorker();
         UniGo.upgradeIcons(document);

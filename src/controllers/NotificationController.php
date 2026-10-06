@@ -15,6 +15,12 @@ use App\Models\NotificationModel;
 final class NotificationController extends Controller
 {
     /** /notifications - the signed-in user's inbox. */
+    public function unreadCount(): void
+    {
+        $this->requireLogin();
+        \App\Core\Response::success(['unread' => (new \App\Models\NotificationModel())->unreadCount((int) \App\Core\Auth::id())])->withHeader('Cache-Control', 'no-store')->send();
+    }
+
     public function index(): void
     {
         $this->requireLogin();

@@ -18,6 +18,7 @@ final class HomeController extends Controller
         $this->view('pages/home', [
             'title'    => app_name() . ' - ' . (string) Config::get('app.tagline', ''),
             'bodyClass' => 'public-page',
+            'companies' => $this->safe(static fn () => \App\Core\Database::instance()->select("SELECT o.id,o.company_name,o.description, (SELECT COUNT(*) FROM routes r WHERE r.operator_id=o.id AND r.status='active') AS route_count, (SELECT COUNT(*) FROM trips t WHERE t.operator_id=o.id AND t.status IN ('scheduled','boarding') AND t.departure_time>NOW()) AS upcoming_trips FROM operators o JOIN users u ON u.id=o.user_id WHERE o.approval_status='approved' AND u.status='active' ORDER BY upcoming_trips DESC,o.company_name LIMIT 12"), []),
             'routes'   => $this->safe(static fn () => (new RouteModel())->popular(6), []),
             'withChart' => false,
         ], 'layouts/public');

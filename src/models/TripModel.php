@@ -236,7 +236,7 @@ final class TripModel extends BaseModel
     {
         return $this->db->transaction(function () use ($data, $actorId): int {
             $vehicleId = (int) $data['vehicle_id'];
-            $vehicle = $this->db->first('SELECT * FROM vehicles WHERE id = ?', [$vehicleId]);
+            $vehicle = $this->db->first('SELECT * FROM vehicles WHERE id = ? FOR UPDATE', [$vehicleId]);
             if (!$vehicle) {
                 throw new \App\Core\NotFoundException('The selected vehicle was not found.');
             }
@@ -244,6 +244,14 @@ final class TripModel extends BaseModel
             $route = $this->db->first('SELECT * FROM routes WHERE id = ?', [(int) $data['route_id']]);
             if (!$route) {
                 throw new \App\Core\NotFoundException('The selected route was not found.');
+            }
+
+            if (!empty($data['driver_id'])) {
+                $driver = $this->db->first('SELECT id FROM drivers WHERE id = ? FOR UPDATE', [(int) $data['driver_id']]);
+                if (!$driver) throw new \App\Core\NotFoundException('Driver not found.');
+                if ($this->db->exists("SELECT 1 FROM trips WHERE driver_id = ? AND status IN ('scheduled','boarding','in_transit') AND NOT (arrival_time <= ? OR departure_time >= ?)", [(int) $data['driver_id'], $data['departure_time'], $data['arrival_time']])) {
+                    throw new \App\Core\ConflictException('The driver already has a trip in this time window.');
+                }
             }
 
             // Conflict detection: one vehicle cannot be on two trips at once.
@@ -292,6 +300,12 @@ final class TripModel extends BaseModel
      */
     public function updateStatus(int $tripId, string $status, ?int $actorId = null, string $reason = ''): array
     {
+        return $this->db->transaction(fn () => $this->transitionStatus($tripId, $status, $actorId, $reason));
+    }
+
+    private function transitionStatus(int $tripId, string $status, ?int $actorId, string $reason): array
+    {
+        $this->db->first('SELECT id FROM trips WHERE id = ? FOR UPDATE', [$tripId]);
         $trip = $this->findDetailed($tripId);
         if (!$trip) {
             throw new \App\Core\NotFoundException('Trip not found.');
@@ -326,6 +340,7 @@ final class TripModel extends BaseModel
         }
         if ($status === 'completed') {
             $data['actual_arrival'] = $now;
+            $this->db->run("UPDATE bookings SET status = 'completed' WHERE trip_id = ? AND status = 'confirmed'", [$tripId]);
         }
         if ($status === 'cancelled') {
             $data['cancelled_reason'] = $reason !== '' ? $reason : 'Cancelled by ' . ($actorId ? 'an administrator' : 'the operator');
@@ -340,6 +355,7 @@ final class TripModel extends BaseModel
                     'cancelled_at'  => $now,
                     'cancel_reason' => 'Trip cancelled by the operator',
                 ], 'id = ?', [(int) $b['id']]);
+                \App\Services\PaymentService::refundForBooking((int) $b['id'], $actorId);
                 NotificationService::tripCancelled((int) $b['passenger_id'], (string) $trip['trip_code'], (string) $trip['route_name']);
             }
             $this->db->update('vehicles', ['status' => 'active'], 'id = ?', [(int) $trip['vehicle_id']]);
@@ -360,7 +376,7 @@ final class TripModel extends BaseModel
                 $this->db->update('drivers', [
                     'status' => 'available',
                     'total_trips' => (int) $trip['driver_id'] ? \App\Core\Database::instance()->value(
-                        'SELECT COUNT(*) FROM trips WHERE driver_id = ? AND status = "completed"',
+                        'SELECT COUNT(*) + 1 FROM trips WHERE driver_id = ? AND status = "completed"',
                         [(int) $trip['driver_id']]
                     ) : 0,
                 ], 'id = ?', [(int) $trip['driver_id']]);

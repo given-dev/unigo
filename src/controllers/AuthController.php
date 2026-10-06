@@ -48,7 +48,7 @@ final class AuthController extends Controller
         }
 
         Flash::success('Welcome back, ' . Auth::firstName() . '.');
-        $this->redirect(Auth::homeRoute());
+        $this->returnToTrip();
     }
 
     public function showRegister(): void
@@ -126,6 +126,16 @@ final class AuthController extends Controller
 
         Csrf::rotate();
         Flash::success('Your account is ready. Welcome to ' . app_name() . '!');
+        $this->returnToTrip();
+    }
+
+    private function returnToTrip(): void
+    {
+        $intended = (string) ($_SESSION['_intended'] ?? '');
+        unset($_SESSION['_intended']);
+        if (str_starts_with($intended, '/') && !str_starts_with($intended, '//') && !str_contains($intended, '\\') && !preg_match('/[\r\n]/', $intended) && preg_match('#/trips/[0-9]+$#', $intended)) {
+            \App\Core\Http::redirect($intended);
+        }
         $this->redirect(Auth::homeRoute());
     }
 
@@ -144,7 +154,7 @@ final class AuthController extends Controller
 
         // Password reset delivery is out of scope for the demonstration build.
         // We acknowledge the request without revealing whether the email exists.
-        Flash::info('If that email is registered, a reset link has been sent. In this demo, contact support to reset your password.');
+        Flash::info('Password reset emails are not configured in this demo. Please contact support to reset your password.');
         $this->redirect('/login');
     }
 

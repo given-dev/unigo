@@ -42,6 +42,8 @@ $demo = $demo ?? is_demo_mode();
     <link rel="stylesheet" href="<?= e(asset('assets/css/icons.css')) ?>">
     <link rel="stylesheet" href="<?= e(asset('assets/css/layout.css')) ?>">
 
+    <link rel="stylesheet" href="<?= e(asset('assets/css/refresh.css')) ?>">
+
     <link rel="icon" type="image/svg+xml" href="<?= e(asset('assets/img/favicon.svg')) ?>">
     <link rel="apple-touch-icon" href="<?= e(asset('assets/img/favicon.svg')) ?>">
     <link rel="manifest" href="<?= e(url('manifest.webmanifest')) ?>">

@@ -208,9 +208,8 @@ final class GpsService
         $progress = max(0.0, min(1.0, $progress));
 
         $segment = $progress * (count($points) - 1);
-        $index = (int) floor($segment);
+        $index = min((int) floor($segment), count($points) - 2);
         $fraction = $segment - $index;
-        $index = min($index, count($points) - 2);
 
         $a = $points[$index];
         $b = $points[$index + 1];
@@ -266,7 +265,7 @@ final class GpsService
     /** Great-circle initial bearing in degrees. */
     public static function bearing(float $lat1, float $lon1, float $lat2, float $lon2): float
     {
-        $theta = deg2rad($lon1 - $lon2);
+        $theta = deg2rad($lon2 - $lon1);
         $phi1 = deg2rad($lat1);
         $phi2 = deg2rad($lat2);
 

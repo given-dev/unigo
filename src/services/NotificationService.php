@@ -76,7 +76,7 @@ final class NotificationService
             'booking',
             'Booking confirmed: ' . $reference,
             'Your seat on ' . $tripCode . ' (' . $routeName . ') is confirmed.',
-            '/passenger/bookings',
+            '/bookings',
             'success',
             'ticket'
         );
@@ -89,7 +89,7 @@ final class NotificationService
             'booking',
             'Booking cancelled: ' . $reference,
             'Booking ' . $reference . ' on trip ' . $tripCode . ' has been cancelled.',
-            '/passenger/bookings',
+            '/bookings',
             'warning',
             'x'
         );
@@ -134,7 +134,7 @@ final class NotificationService
             'trip',
             'Trip cancelled: ' . $tripCode,
             $routeName . ' has been cancelled. Any payment will be refunded.',
-            '/passenger/bookings',
+            '/bookings',
             'danger',
             'alert'
         );
@@ -147,7 +147,7 @@ final class NotificationService
             'payment',
             'Payment received',
             'Payment ' . $reference . ' for ' . number_format($amount, 0) . ' was successful.',
-            '/passenger/payments',
+            '/payments',
             'success',
             'wallet'
         );
@@ -173,7 +173,7 @@ final class NotificationService
             'delivery',
             'Parcel update: ' . strtoupper(str_replace('_', ' ', $status)),
             'Your parcel ' . $tracking . ' is now ' . str_replace('_', ' ', $status) . '.',
-            '/passenger/deliveries',
+            '/deliveries',
             $status === 'delivered' ? 'success' : 'info',
             'box'
         );

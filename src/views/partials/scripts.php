@@ -12,7 +12,7 @@ use App\Core\View;
 
 $leaflet  = (bool) ($withLeaflet ?? false);
 $chartJs  = (bool) ($withChart ?? false);
-$apiBase  = e(url('/api'));
+$apiBase  = url('/api');
 ?>
 <script>
     window.UNIGO = {

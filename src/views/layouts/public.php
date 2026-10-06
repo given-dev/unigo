@@ -14,7 +14,8 @@ use App\Core\View;
 
 $current = Request::instance()->path();
 $links   = [
-    ['/schedule', 'Schedule'],
+    ['/trips/search', 'Find a trip'],
+    ['/#travel-companies', 'Companies'],
     ['/about',    'About'],
     ['/support',  'Support'],
     ['/contact',  'Contact'],

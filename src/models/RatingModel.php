@@ -44,6 +44,9 @@ final class RatingModel extends BaseModel
         if (!$trip) {
             throw new \App\Core\NotFoundException('That trip could not be found.');
         }
+        if (!$trip['driver_id']) {
+            throw new ValidationException('This trip does not have a driver to rate.');
+        }
         if ($trip['status'] !== 'completed') {
             throw new ValidationException('You can only rate a trip after it has been completed.');
         }
@@ -91,7 +94,7 @@ final class RatingModel extends BaseModel
 
         if ($created && $trip['driver_id']) {
             NotificationService::push(
-                (int) $trip['driver_id'],
+                (int) $this->db->value('SELECT user_id FROM drivers WHERE id = ?', [(int) $trip['driver_id']]),
                 'rating',
                 'New ' . $rating . '-star rating',
                 'A passenger rated your trip ' . $trip['trip_code'] . ' on ' . $trip['route_name'] . '.',
@@ -165,6 +168,10 @@ final class RatingModel extends BaseModel
         $where = ['r.is_published = 1'];
         $params = [];
 
+        if (!empty($filters['passenger_id'])) {
+            $where[] = 'r.passenger_id = ?';
+            $params[] = (int) $filters['passenger_id'];
+        }
         if (!empty($filters['driver_id'])) {
             $where[] = 'r.driver_id = ?';
             $params[] = (int) $filters['driver_id'];
