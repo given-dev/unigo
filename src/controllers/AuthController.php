@@ -48,7 +48,7 @@ final class AuthController extends Controller
         }
 
         Flash::success('Welcome back, ' . Auth::firstName() . '.');
-        $this->redirect(Auth::homeRoute());
+        $this->returnToTrip();
     }
 
     public function showRegister(): void
@@ -126,6 +126,16 @@ final class AuthController extends Controller
 
         Csrf::rotate();
         Flash::success('Your account is ready. Welcome to ' . app_name() . '!');
+        $this->returnToTrip();
+    }
+
+    private function returnToTrip(): void
+    {
+        $intended = (string) ($_SESSION['_intended'] ?? '');
+        unset($_SESSION['_intended']);
+        if (str_starts_with($intended, '/') && !str_starts_with($intended, '//') && !str_contains($intended, '\\') && !preg_match('/[\r\n]/', $intended) && preg_match('#/trips/[0-9]+$#', $intended)) {
+            \App\Core\Http::redirect($intended);
+        }
         $this->redirect(Auth::homeRoute());
     }
 

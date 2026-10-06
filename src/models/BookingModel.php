@@ -165,11 +165,12 @@ final class BookingModel extends BaseModel
 
             // 1. Lock the trip row so availability cannot change mid-transaction.
             $trip = $db->first(
-                'SELECT t.*, r.name AS route_name, r.base_fare, v.capacity, v.vehicle_type,
+                'SELECT t.*, r.name AS route_name, r.base_fare, r.status AS route_status, v.status AS vehicle_status, o.approval_status, v.capacity, v.vehicle_type,
                         v.registration_number
                  FROM trips t
                  INNER JOIN routes r ON r.id = t.route_id
                  INNER JOIN vehicles v ON v.id = t.vehicle_id
+                 LEFT JOIN operators o ON o.id = t.operator_id
                  WHERE t.id = ?
                  FOR UPDATE',
                 [$tripId]
@@ -177,6 +178,9 @@ final class BookingModel extends BaseModel
 
             if (!$trip) {
                 throw new \App\Core\NotFoundException('That trip is no longer available.');
+            }
+            if ($trip['route_status'] !== 'active' || !in_array($trip['vehicle_status'], ['active','on_trip'], true) || ($trip['operator_id'] && $trip['approval_status'] !== 'approved')) {
+                throw new ConflictException('This trip is currently unavailable for booking.');
             }
             if ($trip['status'] !== 'scheduled' && $trip['status'] !== 'boarding') {
                 throw new ConflictException('This trip is not open for booking.');

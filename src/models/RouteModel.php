@@ -131,36 +131,49 @@ final class RouteModel extends BaseModel
      */
     public function search(array $filters = [], int $page = 1, int $perPage = 10): array
     {
-        $where = ["t.status IN ('scheduled','boarding')", "r.status = 'active'", "v.status IN ('active','on_trip')"];
+        $where = ["(o.id IS NULL OR (o.approval_status='approved' AND EXISTS (SELECT 1 FROM users ou WHERE ou.id=o.user_id AND ou.status='active')))", "t.status IN ('scheduled','boarding')", "r.status = 'active'", "v.status IN ('active','on_trip')"];
         $params = [];
 
         $from = trim((string) ($filters['from'] ?? ''));
         $to   = trim((string) ($filters['to'] ?? ''));
 
         if ($from !== '') {
-            $where[] = '(r.origin_name LIKE ? OR r.name LIKE ? OR rs.stop_name LIKE ?)';
+            $where[] = '(r.origin_name LIKE ? OR EXISTS (SELECT 1 FROM route_stops fs WHERE fs.route_id=r.id AND fs.stop_name LIKE ?))';
             $like = '%' . $from . '%';
-            array_push($params, $like, $like, $like);
+            array_push($params, $like, $like);
         }
         if ($to !== '') {
-            $where[] = '(r.destination_name LIKE ? OR r.name LIKE ? OR rs.stop_name LIKE ?)';
+            $where[] = '(r.destination_name LIKE ? OR EXISTS (SELECT 1 FROM route_stops ts WHERE ts.route_id=r.id AND ts.stop_name LIKE ?))';
             $like = '%' . $to . '%';
-            array_push($params, $like, $like, $like);
+            array_push($params, $like, $like);
+        }
+
+        if ($from !== '' && $to !== '') {
+            $where[] = '(r.origin_name LIKE ? OR r.destination_name LIKE ? OR EXISTS (SELECT 1 FROM route_stops fs JOIN route_stops ts ON ts.route_id=fs.route_id AND ts.stop_order>fs.stop_order WHERE fs.route_id=r.id AND fs.stop_name LIKE ? AND ts.stop_name LIKE ?))';
+            array_push($params, '%' . $from . '%', '%' . $to . '%', '%' . $from . '%', '%' . $to . '%');
         }
 
         // Departure window: default "today onwards"
-        $date = !empty($filters['date']) ? $filters['date'] : date('Y-m-d');
+        $hasDate = !empty($filters['date']);
+        $date = $hasDate ? $filters['date'] : date('Y-m-d');
+        if ($hasDate && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || date('Y-m-d', strtotime($date)) !== $date)) {
+            throw new \App\Core\ValidationException('Choose a valid travel date.');
+        }
         $fromTime = !empty($filters['depart_after'])
             ? $filters['depart_after']
             : $date . ' 00:00:00';
         $toTime = !empty($filters['depart_before'])
             ? $filters['depart_before']
-            : date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
+            : date('Y-m-d', strtotime($date . ($hasDate ? ' +1 day' : ' +30 days'))) . ' 00:00:00';
 
         $where[] = 't.departure_time >= ? AND t.departure_time < ? AND t.departure_time > NOW()';
         $params[] = $fromTime;
         $params[] = $toTime;
 
+        if (!empty($filters['operator_id'])) {
+            $where[] = 't.operator_id = ?';
+            $params[] = (int)$filters['operator_id'];
+        }
         if (!empty($filters['transport_type']) && $filters['transport_type'] !== 'all') {
             $where[] = 'v.vehicle_type = ?';
             $params[] = $filters['transport_type'];
@@ -260,7 +273,7 @@ final class RouteModel extends BaseModel
                     (SELECT COUNT(*) FROM trips t WHERE t.route_id = r.id AND t.status = 'scheduled') AS upcoming_trips
              FROM routes r
              LEFT JOIN operators o ON o.id = r.operator_id
-             WHERE r.status = 'active'
+             WHERE r.status = 'active' AND (o.id IS NULL OR (o.approval_status='approved' AND EXISTS (SELECT 1 FROM users ou WHERE ou.id=o.user_id AND ou.status='active')))
              ORDER BY upcoming_trips DESC, r.name ASC
              LIMIT $limit"
         );

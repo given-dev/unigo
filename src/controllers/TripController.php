@@ -19,12 +19,11 @@ final class TripController extends Controller
     /** /trips/search - search bookable trips. */
     public function search(): void
     {
-        $this->requireLogin();
-
         $filters = [
             'from'           => trim($this->request->str('from')),
             'to'             => trim($this->request->str('to')),
             'date'           => trim($this->request->str('date')),
+            'operator_id' => max(0,$this->request->int('operator_id')),
             'transport_type' => trim($this->request->str('transport_type')),
         ];
         $page = max(1, $this->request->int('page', 1));
@@ -41,7 +40,8 @@ final class TripController extends Controller
             'trips'     => $result['items'] ?? [],
             'paginator' => $result['paginator'] ?? null,
             'filters'   => $filters,
-        ], 'layouts/app');
+            'companies' => $this->safe(static fn () => \App\Core\Database::instance()->select("SELECT o.id,o.company_name FROM operators o JOIN users u ON u.id=o.user_id WHERE o.approval_status='approved' AND u.status='active' ORDER BY o.company_name"), []),
+        ], Auth::check() ? 'layouts/app' : 'layouts/public');
     }
 
     /** /trips/{id} - trip detail with a seat picker. */

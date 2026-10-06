@@ -46,6 +46,12 @@ All seeded accounts use password `UniGo@2026`:
 | Driver | driver@unigo.test |
 | Authority | authority@unigo.test |
 
+## Landing page and booking
+
+The homepage shows approved travel companies from the database, active routes, and a search form for departure, destination, travel date, and company. Guests can browse available trips. Selecting a seat requires sign-in; login or registration returns the user to their selected trip. Company links show upcoming departures over the next 30 days when no date is chosen. Date searches use the selected day. Route matching respects direction and intermediate-stop order.
+
+The interface uses a green and white theme, company cards, cleaner search/result panels, and layouts for smaller screens.
+
 ## Workspaces
 
 - Passenger: registration, trip search, seat selection, segment fares, demo payments, cancellation/refunds, tracking, parcel requests, notifications, complaints, emergencies, and ratings.

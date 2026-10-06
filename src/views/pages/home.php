@@ -1,182 +1,45 @@
 <?php
-/**
- * UniGo - public landing page.
- *
- * @var array $routes  popular active routes (may be empty)
- */
 declare(strict_types=1);
-
-$routes = $routes ?? [];
-
-$features = [
-    ['icon' => 'search',     'title' => 'Search every mode',   'text' => 'Buses, taxis, boda-bodas and shared rides in one search, with live seat availability.'],
-    ['icon' => 'ticket',     'title' => 'Conflict-free booking', 'text' => 'Lock a seat in seconds. Double bookings are impossible by design.'],
-    ['icon' => 'navigation', 'title' => 'Live tracking',       'text' => 'Follow your vehicle on the map with ETA updates and stop-by-stop progress.'],
-    ['icon' => 'package',    'title' => 'Send a parcel',       'text' => 'Move goods on the same fleet and track them end to end with a tracking number.'],
-    ['icon' => 'siren',      'title' => 'One-tap SOS',         'text' => 'Alerts reach the driver and the transport authority instantly, with your location.'],
-    ['icon' => 'bar-chart',  'title' => 'Operational insight', 'text' => 'Operators and regulators get revenue, safety, congestion and usage analytics.'],
-];
-
-$roles = [
-    ['icon' => 'user',     'title' => 'Passenger',  'text' => 'Book, track, pay and report from one dashboard.'],
-    ['icon' => 'bus',      'title' => 'Driver',     'text' => 'See today\'s trips, navigate and manage passengers.'],
-    ['icon' => 'building', 'title' => 'Operator',   'text' => 'Run your fleet, routes, drivers and revenue.'],
-    ['icon' => 'shield',   'title' => 'Authority',  'text' => 'Monitor the network and coordinate emergency response.'],
-    ['icon' => 'settings', 'title' => 'Admin',      'text' => 'Govern accounts, roles, settings and the audit trail.'],
-];
+$companies=$companies ?? []; $routes=$routes ?? [];
 ?>
-<section class="section">
-    <div class="hero">
-        <span class="badge badge-demo">
-            <i class="icon icon--xs" data-icon="flame">flame</i> Simulated data environment
-        </span>
-        <h1 class="text-xl mt-3" style="font-size:clamp(1.75rem,4vw,2.75rem);line-height:1.1">
-            Smart transport for people and parcels &mdash; in one platform.
-        </h1>
-        <p class="hero__sub mt-3" style="max-width:60ch">
-            <?= e(app_name()) ?> connects passengers, drivers, operators and the transport authority,
-            with booking, live tracking, payments, delivery and safety built in.
-        </p>
-
-        <div class="flex gap-2 flex-wrap mt-5">
-            <?php if (\App\Core\Auth::check()): ?>
-                <a class="btn btn--primary btn--lg" href="<?= e(url('/home')) ?>">
-                    <i class="icon" data-icon="dashboard">dashboard</i> Open dashboard
-                </a>
-                <a class="btn btn--light btn--lg" href="<?= e(url('/schedule')) ?>">Browse schedule</a>
-            <?php else: ?>
-                <a class="btn btn--primary btn--lg" href="<?= e(url('/register')) ?>">
-                    <i class="icon" data-icon="user-plus">user-plus</i> Create free account
-                </a>
-                <a class="btn btn--light btn--lg" href="<?= e(url('/login')) ?>">Sign in</a>
-            <?php endif; ?>
-        </div>
-
-        <div class="search-panel mt-6">
-            <form method="get" action="<?= e(url('/schedule')) ?>">
-                <div class="search-panel__grid" style="grid-template-columns:1fr auto">
-                    <div class="search-field">
-                        <i class="icon search-field__icon" data-icon="search">search</i>
-                        <input class="input" type="search" name="q" placeholder="Where are you going? Try &ldquo;Kampala&rdquo;">
-                    </div>
-                    <button class="btn btn--primary" type="submit">
-                        <i class="icon" data-icon="search">search</i> Find a trip
-                    </button>
-                </div>
-            </form>
-            <div class="chips">
-                <?php foreach (['Kampala', 'Entebbe', 'Jinja', 'Mbarara', 'Gulu'] as $place): ?>
-                    <a class="chip" href="<?= e(url('/schedule?q=' . urlencode($place))) ?>">
-                        <i class="icon icon--xs" data-icon="pin">pin</i> <?= e($place) ?>
-                    </a>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-
-    <div class="section__head">
-        <div>
-            <h2 class="section__title">Everything in one platform</h2>
-            <p class="text-sm text-muted-2 mb-0">From a first search to fleet-wide analytics.</p>
-        </div>
-    </div>
-    <div class="grid grid-3 gap-3">
-        <?php foreach ($features as $feature): ?>
-            <article class="card">
-                <div class="card__body">
-                    <span class="stat__icon mb-3"><i class="icon" data-icon="<?= e($feature['icon']) ?>"><?= e($feature['icon']) ?></i></span>
-                    <h3 class="card__title"><?= e($feature['title']) ?></h3>
-                    <p class="text-sm text-muted-2 mb-0"><?= e($feature['text']) ?></p>
-                </div>
-            </article>
-        <?php endforeach; ?>
-    </div>
+<section class="landing-hero">
+ <div class="landing-hero__copy">
+  <span class="landing-eyebrow">YOUR JOURNEY STARTS HERE</span>
+  <h1>Different companies.<br><span>One easy journey.</span></h1>
+  <p>Find your route, compare travel companies, and reserve your seat. Travel across Uganda with everything in one place.</p>
+  <a class="btn btn--light" href="#travel-companies">Explore travel companies <i class="icon icon--sm" data-icon="arrow-right">arrow-right</i></a>
+ </div>
+ <div class="journey-visual" aria-hidden="true">
+  <div class="journey-visual__line"></div>
+  <span class="journey-point journey-point--start">Kampala</span><span class="journey-point journey-point--end">Your next destination</span>
+  <div class="journey-ticket"><span class="landing-eyebrow">LET’S GO PLACES</span><strong>Good journeys.<br>Simple bookings.</strong><div class="journey-ticket__bottom"><span>Search · Choose · Book</span><i class="icon" data-icon="bus">bus</i></div></div>
+ </div>
 </section>
-
-<section class="section">
-    <div class="section__head">
-        <div>
-            <h2 class="section__title">Popular routes</h2>
-            <p class="text-sm text-muted-2 mb-0">Active routes with scheduled trips.</p>
-        </div>
-        <a class="btn btn--ghost btn--sm" href="<?= e(url('/schedule')) ?>">
-            View all <i class="icon icon--sm" data-icon="chevron-right">chevron-right</i>
-        </a>
-    </div>
-
-    <?php if (empty($routes)): ?>
-        <?= \App\Core\View::partial('partials/empty-state', [
-            'icon'  => 'route',
-            'title' => 'No routes published yet',
-            'text'  => 'Routes will appear here once operators publish their schedules.',
-            'action' => '<a class="btn btn--primary" href="' . e(url('/register')) . '">Create an account</a>',
-        ]) ?>
-    <?php else: ?>
-        <div class="grid grid-3 gap-3">
-            <?php foreach ($routes as $route): ?>
-                <a class="card card--hover" style="text-decoration:none;color:inherit"
-                   href="<?= e(url('/schedule?q=' . urlencode((string) ($route['route_code'] ?? '')))) ?>">
-                    <div class="card__body">
-                        <div class="flex items-center justify-between mb-3">
-                            <span class="badge badge-primary"><?= e($route['route_code'] ?? '') ?></span>
-                            <span class="text-xs text-muted-2">
-                                <i class="icon icon--xs" data-icon="bus">bus</i>
-                                <?= (int) ($route['upcoming_trips'] ?? 0) ?> upcoming
-                            </span>
-                        </div>
-                        <p class="fw-700 mb-1">
-                            <?= e($route['origin_name'] ?? '') ?>
-                            <i class="icon icon--xs" data-icon="arrow-right">arrow-right</i>
-                            <?= e($route['destination_name'] ?? '') ?>
-                        </p>
-                        <p class="text-sm text-muted-2 mb-3"><?= e($route['company_name'] ?? app_name()) ?></p>
-                        <div class="flex items-center justify-between text-sm">
-                            <span><i class="icon icon--xs" data-icon="route">route</i> <?= e((string) ($route['distance_km'] ?? '0')) ?> km</span>
-                            <span><i class="icon icon--xs" data-icon="clock">clock</i> <?= e(duration_minutes((int) ($route['duration_minutes'] ?? 0))) ?></span>
-                            <span class="fw-700 text-primary"><?= e(money($route['base_fare'] ?? 0)) ?></span>
-                        </div>
-                    </div>
-                </a>
-            <?php endforeach; ?>
-        </div>
-    <?php endif; ?>
+<section class="landing-search" aria-label="Find a trip">
+ <form method="get" action="<?= e(url('/trips/search')) ?>" class="landing-search__form">
+  <div class="field"><label for="home-from">Leaving from</label><input class="input" id="home-from" name="from" placeholder="Departure town" autocomplete="off"></div>
+  <div class="field"><label for="home-to">Going to</label><input class="input" id="home-to" name="to" placeholder="Destination town" autocomplete="off"></div>
+  <div class="field"><label for="home-date">Travel date</label><input class="input" type="date" id="home-date" name="date" min="<?= e(date('Y-m-d')) ?>" value="<?= e(date('Y-m-d')) ?>"></div>
+  <div class="field"><label for="home-company">Travel company</label><select class="select" id="home-company" name="operator_id"><option value="">All companies</option><?php foreach($companies as $company): ?><option value="<?= (int)$company['id'] ?>"><?= e($company['company_name']) ?></option><?php endforeach; ?></select></div>
+  <button class="btn btn--primary" type="submit"><i class="icon" data-icon="search">search</i> Find a trip</button>
+ </form>
+ <p class="landing-search__note">Browse trips freely. Sign in when you’re ready to choose a seat.</p>
 </section>
-
-<section class="section">
-    <div class="section__head">
-        <div>
-            <h2 class="section__title">Built for every role</h2>
-            <p class="text-sm text-muted-2 mb-0">One account, a dashboard tailored to what you do.</p>
-        </div>
-    </div>
-    <div class="grid grid-auto-sm gap-3">
-        <?php foreach ($roles as $role): ?>
-            <article class="card card--flat">
-                <div class="card__body">
-                    <span class="stat__icon mb-2"><i class="icon" data-icon="<?= e($role['icon']) ?>"><?= e($role['icon']) ?></i></span>
-                    <h3 class="card__title" style="font-size:var(--fs-base)"><?= e($role['title']) ?></h3>
-                    <p class="text-sm text-muted-2 mb-0"><?= e($role['text']) ?></p>
-                </div>
-            </article>
-        <?php endforeach; ?>
-    </div>
+<section class="landing-section" id="travel-companies">
+ <div class="landing-section__head"><div><span class="landing-eyebrow">MORE CHOICE, LESS HASSLE</span><h2>Travel companies, together.</h2><p>Explore the operators available on UniGo and find their upcoming trips.</p></div><a class="btn btn--ghost" href="<?= e(url('/trips/search')) ?>">Browse all trips <i class="icon icon--sm" data-icon="arrow-right">arrow-right</i></a></div>
+ <?php if($companies): ?><div class="company-grid">
+ <?php foreach($companies as $index=>$company): ?>
+ <article class="company-card"><div class="company-card__top"><span class="company-avatar company-avatar--<?= $index%4 ?>"><?= e(mb_strtoupper(mb_substr($company['company_name'],0,1))) ?></span><span class="company-card__category">Travel operator</span></div><h3><?= e($company['company_name']) ?></h3><p><?= (int)$company['route_count'] ?> active route<?= (int)$company['route_count']===1?'':'s' ?> <span>·</span> <?= (int)$company['upcoming_trips'] ?> upcoming trip<?= (int)$company['upcoming_trips']===1?'':'s' ?></p><a class="company-card__link" href="<?= e(url('/trips/search?operator_id='.(int)$company['id'])) ?>">View trips <i class="icon icon--sm" data-icon="arrow-right">arrow-right</i></a></article>
+ <?php endforeach; ?></div>
+ <?php else: ?><div class="landing-empty">Travel companies will appear here once their accounts are approved. <a href="<?= e(url('/contact')) ?>">Contact us</a> to join UniGo.</div><?php endif; ?>
 </section>
-
-<section class="section">
-    <div class="card" style="background:linear-gradient(140deg,#0F172A,#16305C);color:#E2E8F0;border:0">
-        <div class="card__body" style="text-align:center;padding:var(--sp-8) var(--sp-5)">
-            <h2 class="text-lg" style="color:#fff">Ready to move with <?= e(app_name()) ?>?</h2>
-            <p class="mb-5" style="max-width:52ch;margin-inline:auto">
-                Create your account and try the full passenger, driver, operator and authority experience with demo data.
-            </p>
-            <?php if (\App\Core\Auth::check()): ?>
-                <a class="btn btn--primary btn--lg" href="<?= e(url('/home')) ?>">Go to dashboard</a>
-            <?php else: ?>
-                <div class="flex gap-2 flex-wrap justify-center">
-                    <a class="btn btn--primary btn--lg" href="<?= e(url('/register')) ?>">Create free account</a>
-                    <a class="btn btn--light btn--lg" href="<?= e(url('/login')) ?>">Sign in</a>
-                </div>
-            <?php endif; ?>
-        </div>
-    </div>
+<section class="landing-section">
+ <div class="landing-section__head"><div><span class="landing-eyebrow">FIND YOUR NEXT STOP</span><h2>Explore popular routes.</h2><p>See destinations, operators, and starting fares at a glance.</p></div></div>
+ <div class="route-grid"><?php foreach($routes as $route): ?>
+ <article class="landing-route"><div class="landing-route__icon"><i class="icon" data-icon="bus">bus</i></div><p class="landing-route__company"><?= e($route['company_name'] ?? 'Independent operator') ?></p><h3><?= e($route['origin_name']) ?> <span>→</span> <?= e($route['destination_name']) ?></h3><p><?= e(duration_minutes((int)$route['duration_minutes'])) ?> <span>·</span> <?= e((string)$route['distance_km']) ?> km</p><div class="landing-route__bottom"><span><small>Starting fare</small><strong><?= e(money($route['base_fare'])) ?></strong></span><a class="btn btn--secondary btn--sm" href="<?= e(url('/trips/search?'.http_build_query(['from'=>$route['origin_name'],'to'=>$route['destination_name'],'operator_id'=>$route['operator_id']]))) ?>">Find seats</a></div></article>
+ <?php endforeach; ?><?php if(!$routes): ?><p class="landing-empty">Published routes will appear here soon.</p><?php endif; ?></div>
+</section>
+<section class="landing-steps">
+ <div><span class="landing-eyebrow">A LITTLE PLANNING. A GREAT JOURNEY.</span><h2>From search to seat,<br>in three simple steps.</h2></div>
+ <?php foreach([['01','Find your trip','Choose your towns, travel date, and preferred company.'],['02','Pick your seat','Check the fare and select an available seat.'],['03','You’re ready to go','Confirm your booking and keep your ticket in My bookings.']] as $step): ?><div class="landing-step"><span><?= e($step[0]) ?></span><h3><?= e($step[1]) ?></h3><p><?= e($step[2]) ?></p></div><?php endforeach; ?>
 </section>

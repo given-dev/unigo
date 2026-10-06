@@ -18,8 +18,9 @@ def token(html):
  if not match:raise AssertionError('Missing CSRF token')
  return match.group(1)
 public=client()
-for path in ['/','/about','/contact','/schedule','/login','/register']:
+for path in ['/','/about','/contact','/schedule','/trips/search','/login','/register']:
  status,html=request(public,path);ok(status==200 and 'Fatal error' not in html,f'{path}: {status}')
+status,home=request(public,'/');ok('Travel companies, together.' in home and 'Kampala City Bus Services' in home,'Landing page must display seeded companies')
 status,html=request(public,'/api/notifications/unread-count');ok(status==401,f'API must require authentication: {status} {html[:200]}')
 pages=re.findall(r"'(/(?:admin|operator|authority|driver)/[^']+)'\s*=>",open('src/controllers/StubController.php').read())
 for role in ['passenger','admin','operator','authority','driver']:

@@ -15,33 +15,35 @@ $paginator = $paginator ?? null;
 $filters   = $filters ?? [];
 ?>
 <section class="section">
+    <h1 class="section__title mb-3">Find your next journey</h1>
     <form method="get" action="<?= e(url('/trips/search')) ?>" class="search-panel mb-5">
         <div class="search-panel__grid">
             <div class="search-field">
                 <i class="icon search-field__icon" data-icon="pin">pin</i>
-                <input class="input" type="text" name="from" value="<?= e($filters['from'] ?? '') ?>"
+                <input class="input" type="text" name="from" aria-label="Departure town" value="<?= e($filters['from'] ?? '') ?>"
                        placeholder="From (town or stop)">
             </div>
             <div class="search-field">
                 <i class="icon search-field__icon" data-icon="navigation">navigation</i>
-                <input class="input" type="text" name="to" value="<?= e($filters['to'] ?? '') ?>"
+                <input class="input" type="text" name="to" aria-label="Destination town" value="<?= e($filters['to'] ?? '') ?>"
                        placeholder="To (town or stop)">
             </div>
             <div class="search-field">
                 <i class="icon search-field__icon" data-icon="calendar">calendar</i>
-                <input class="input" type="date" name="date" value="<?= e($filters['date'] ?? date('Y-m-d')) ?>">
+                <input class="input" type="date" name="date" aria-label="Travel date" min="<?= e(date('Y-m-d')) ?>" value="<?= e($filters['date'] ?? date('Y-m-d')) ?>">
             </div>
             <div class="search-field">
                 <i class="icon search-field__icon" data-icon="bus">bus</i>
-                <select class="select" name="transport_type">
+                <select class="select" name="transport_type" aria-label="Transport type">
                     <option value="">Any transport</option>
                     <option value="bus" <?= ($filters['transport_type'] ?? '') === 'bus' ? 'selected' : '' ?>>Bus</option>
-                    <option value="minibus" <?= ($filters['transport_type'] ?? '') === 'minibus' ? 'selected' : '' ?>>Minibus</option>
+                    <option value="electric_bus" <?= ($filters['transport_type'] ?? '') === 'electric_bus' ? 'selected' : '' ?>>Electric bus</option>
                     <option value="taxi" <?= ($filters['transport_type'] ?? '') === 'taxi' ? 'selected' : '' ?>>Taxi</option>
                     <option value="boda" <?= ($filters['transport_type'] ?? '') === 'boda' ? 'selected' : '' ?>>Boda</option>
                     <option value="shared_ride" <?= ($filters['transport_type'] ?? '') === 'shared_ride' ? 'selected' : '' ?>>Shared ride</option>
                 </select>
             </div>
+            <div class="search-field"><select class="select" name="operator_id" aria-label="Travel company"><option value="">All travel companies</option><?php foreach ($companies ?? [] as $company): ?><option value="<?= (int)$company['id'] ?>" <?= (int)($filters['operator_id'] ?? 0)===(int)$company['id'] ? 'selected' : '' ?>><?= e($company['company_name']) ?></option><?php endforeach; ?></select></div>
             <button class="btn btn--primary" type="submit">
                 <i class="icon" data-icon="search">search</i> Search
             </button>
@@ -51,7 +53,7 @@ $filters   = $filters ?? [];
     <div class="section__head">
         <div>
             <h2 class="section__title">Available trips</h2>
-            <p class="text-sm text-muted-2 mb-0"><?= count($trips) ?> result<?= count($trips) === 1 ? '' : 's' ?> for your search.</p>
+            <p class="text-sm text-muted-2 mb-0"><?= $paginator ? $paginator->total : count($trips) ?> result<?= ($paginator ? $paginator->total : count($trips)) === 1 ? '' : 's' ?> for your search.</p>
         </div>
     </div>
 
