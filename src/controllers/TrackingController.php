@@ -50,6 +50,26 @@ final class TrackingController extends Controller
         ], 'layouts/app');
     }
 
+    /** JSON feed restricted to a passenger's own active booking. */
+    public function feed(string $id): void
+    {
+        $this->requireLogin();
+        $allowed = \App\Core\Database::instance()->exists(
+            "SELECT 1 FROM bookings WHERE trip_id = ? AND passenger_id = ? AND status IN ('pending','confirmed')",
+            [(int) $id, (int) Auth::id()]
+        );
+        if (!$allowed) {
+            \App\Core\Response::notFound('No active booking was found for that trip.')->send();
+            return;
+        }
+        $trip = (new TripModel())->findDetailed((int) $id);
+        if (!$trip) {
+            \App\Core\Response::notFound()->send();
+            return;
+        }
+        \App\Core\Response::success($this->buildMap($trip))->withHeader('Cache-Control', 'no-store')->send();
+    }
+
     /**
      * @return array<string,mixed>
      */
@@ -101,7 +121,7 @@ final class TrackingController extends Controller
                 'status'    => (string) ($pos['status'] ?? ''),
                 'speed'     => isset($pos['speed']) ? (int) round((float) $pos['speed']) : null,
                 'icon'      => transport_icon((string) ($pos['vehicle_type'] ?? 'bus')),
-                'simulated' => true,
+                'simulated' => (bool) ($pos['is_simulated'] ?? false),
                 'moving'    => ((string) ($pos['status'] ?? '')) === 'on_trip',
             ];
         }
@@ -118,6 +138,7 @@ final class TrackingController extends Controller
             'markers'  => $markers,
             'vehicles' => $vehicles,
             'follow'   => $vehicles !== [],
+            'pollUrl'  => 'tracking/' . (int) $trip['id'],
         ];
     }
 

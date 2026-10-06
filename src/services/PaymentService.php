@@ -109,7 +109,7 @@ final class PaymentService
 
         if ($status === 'successful') {
             $db->run(
-                'UPDATE passengers SET total_spent = total_spent + ?, total_bookings = total_bookings + 1
+                'UPDATE passengers SET total_spent = total_spent + ?
                  WHERE user_id = ?',
                 [$amount, $userId]
             );
@@ -164,10 +164,12 @@ final class PaymentService
                 'payment',
                 'Refund processed',
                 'Your payment of ' . number_format((float) $payment['amount'], 0) . ' ' . $payment['currency'] . ' has been refunded (simulated).',
-                '/passenger/payments',
+                '/payments',
                 'info',
                 'wallet'
             );
+            $db->run('UPDATE passengers SET total_spent = GREATEST(0, total_spent - ?) WHERE user_id = ?', [(float) $payment['amount'], (int) $payment['user_id']]);
+            $db->run('UPDATE operators o JOIN trips t ON t.operator_id = o.id JOIN bookings b ON b.trip_id = t.id SET o.total_revenue = GREATEST(0, o.total_revenue - ?) WHERE b.id = ?', [(float) $payment['amount'], $bookingId]);
             $count++;
         }
 

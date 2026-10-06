@@ -23,6 +23,7 @@ final class StubController extends Controller
      */
     public const PAGES = [
         // Driver
+        '/driver/bookings'    => ['Boarding', 'Board passengers on your assigned trips.', 'driver'],
         '/driver/trips'       => ['My trips', 'Trips assigned to you, with boarding and status controls.', 'driver'],
         '/driver/tracking'    => ['Live tracking', 'Share your position and follow the trip progress.', 'driver'],
         '/driver/deliveries'  => ['Deliveries', 'Parcels assigned to your vehicle.', 'driver'],

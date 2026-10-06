@@ -149,7 +149,7 @@ final class RouteModel extends BaseModel
         }
 
         // Departure window: default "today onwards"
-        $date = $filters['date'] ?? date('Y-m-d');
+        $date = !empty($filters['date']) ? $filters['date'] : date('Y-m-d');
         $fromTime = !empty($filters['depart_after'])
             ? $filters['depart_after']
             : $date . ' 00:00:00';
@@ -157,7 +157,7 @@ final class RouteModel extends BaseModel
             ? $filters['depart_before']
             : date('Y-m-d', strtotime($date . ' +1 day')) . ' 00:00:00';
 
-        $where[] = 't.departure_time BETWEEN ? AND ?';
+        $where[] = 't.departure_time >= ? AND t.departure_time < ? AND t.departure_time > NOW()';
         $params[] = $fromTime;
         $params[] = $toTime;
 

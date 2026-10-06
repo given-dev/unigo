@@ -701,7 +701,7 @@ try {
                     ? '+256***' . substr($phone, -3)
                     : '****' . rnd(1000, 9999),
                 'status'       => $paymentStatus === 'refunded' ? 'refunded' : 'successful',
-                'refunded_amount' => $paymentStatus === 'refunded' ? $fare : null,
+                'refunded_amount' => $paymentStatus === 'refunded' ? $fare : 0,
                 'is_mock'      => 1,
                 'initiated_by' => $userId,
                 'created_at'   => dt('-2 weeks'),

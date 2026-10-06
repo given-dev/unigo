@@ -148,7 +148,7 @@ $perRow = max(1, $perRow);
                                 <select class="select" id="from_stop_id" name="from_stop_id">
                                     <option value="">Origin</option>
                                     <?php foreach ($stops as $stop): ?>
-                                        <option value="<?= (int) ($stop['id'] ?? 0) ?>"><?= e($stop['stop_name'] ?? '') ?></option>
+                                        <option data-fare="<?= e((string)($stop['fare_from_origin'] ?? 0)) ?>" value="<?= (int) ($stop['id'] ?? 0) ?>"><?= e($stop['stop_name'] ?? '') ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
@@ -157,7 +157,7 @@ $perRow = max(1, $perRow);
                                 <select class="select" id="to_stop_id" name="to_stop_id">
                                     <option value="">Destination</option>
                                     <?php foreach ($stops as $stop): ?>
-                                        <option value="<?= (int) ($stop['id'] ?? 0) ?>"><?= e($stop['stop_name'] ?? '') ?></option>
+                                        <option data-fare="<?= e((string)($stop['fare_from_origin'] ?? 0)) ?>" value="<?= (int) ($stop['id'] ?? 0) ?>"><?= e($stop['stop_name'] ?? '') ?></option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>

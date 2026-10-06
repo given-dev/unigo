@@ -27,6 +27,7 @@ final class SettingsService
         if (self::$cache !== null) {
             return;
         }
+        self::$cache = [];
         $rows = Database::instance()->select('SELECT setting_key, setting_value FROM system_settings');
         foreach ($rows as $row) {
             self::$cache[(string) $row['setting_key']] = (string) ($row['setting_value'] ?? '');

@@ -2,8 +2,7 @@
 /**
  * UniGo - front controller.
  *
- * All browser page requests enter here (see public/.htaccess). API calls are
- * plain PHP files under public/api and are intentionally not routed here.
+ * Page and JSON API requests enter here (see public/.htaccess).
  */
 
 declare(strict_types=1);
@@ -21,6 +20,7 @@ use App\Controllers\NotificationController;
 use App\Controllers\PaymentController;
 use App\Controllers\ProfileController;
 use App\Controllers\StubController;
+use App\Controllers\StaffController;
 use App\Controllers\TrackingController;
 use App\Controllers\TripController;
 use App\Core\Http;
@@ -76,7 +76,14 @@ $router->get('/bookings', [BookingController::class, 'index']);
 $router->get('/bookings/{id}', [BookingController::class, 'show']);
 $router->post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
 
+$router->post('/api/driver/location', [\App\Controllers\DriverLocationController::class, 'store']);
+$router->get('/api/tracking/{id}', [TrackingController::class, 'feed']);
+$router->get('/api/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+
 $router->get('/tracking', [TrackingController::class, 'index']);
+
+$router->get('/ratings', [\App\Controllers\RatingController::class, 'index']);
+$router->post('/ratings', [\App\Controllers\RatingController::class, 'store']);
 
 $router->get('/payments', [PaymentController::class, 'index']);
 $router->get('/payments/{id}', [PaymentController::class, 'show']);
@@ -106,7 +113,8 @@ $router->get('/passenger/emergency', [EmergencyController::class, 'create']);
 // Staff workspace placeholders (single source of truth: StubController::PAGES)
 // ---------------------------------------------------------------------------
 foreach (array_keys(StubController::PAGES) as $staffPath) {
-    $router->get($staffPath, [StubController::class, 'show']);
+    $router->get($staffPath, [StaffController::class, 'index']);
+    $router->post($staffPath, [StaffController::class, 'save']);
 }
 
 // ---------------------------------------------------------------------------
