@@ -97,6 +97,12 @@ if ((bool) Config::get('app.trust_proxy', false) && !empty($_SERVER['HTTP_X_FORW
 // ---------------------------------------------------------------------------
 Auth::startSession();
 Auth::attemptRememberLogin();
+if (!Request::isCli() && !headers_sent()) {
+    header('Cache-Control: no-store, private');
+    header('Pragma: no-cache');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+}
 
 // ---------------------------------------------------------------------------
 // Request instance (available to every layer)

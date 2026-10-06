@@ -34,6 +34,14 @@ Open `http://127.0.0.1:8000`. This is a development server.
 
 The public document root is `public/`. Keep configuration, source, database scripts, and storage outside the web document root in production.
 
+## Account sessions
+
+Sign out uses a CSRF-protected POST, clears the authenticated session and remembered sign-in tokens, and returns to the homepage with confirmation. Opening `/logout` only displays a confirmation form. Protected pages require a fresh sign-in after logout or expiry; account suspension, deactivation and role changes are checked on every request. Changing a password invalidates other sessions and remembered tokens while retaining the current session.
+
+Dynamic pages use `no-store`. Restoring a page with Back or returning to another tab rechecks session state so an old dashboard or form is refreshed. Password changes use the same minimum strength rules as registration. Profile edits validate names, phone, gender and calendar dates, and optional birth dates can be cleared.
+
+For an existing local clone, update the files with `git pull --ff-only origin main`. An update does not require reimporting the database or rerunning the demo seeder. Do not reimport `schema.sql` into a database containing data you want to keep.
+
 ## Demo accounts
 
 All seeded accounts use password `UniGo@2026`:
@@ -80,6 +88,7 @@ Use a **disposable seeded database** for backend tests:
 php tests/booking.php
 python tests/http_smoke.py http://127.0.0.1:8000
 python tests/journey.py http://127.0.0.1:8000
+python tests/authentication.py http://127.0.0.1:8000
 ```
 
 `tests/booking.php` verifies passenger-profile creation, paid checkout, duplicate booking rejection, refund, released-seat rebooking, and invalid-seat rejection. Its changes are rolled back.
@@ -87,6 +96,8 @@ python tests/journey.py http://127.0.0.1:8000
 `tests/http_smoke.py` logs into all five roles, opens all staff workspaces, and checks passenger restrictions and JSON APIs. It requires the development server and seeded accounts. `tests/journey.py` writes an operator, fleet, driver, trip, passenger, booking, GPS report, and rating to verify a full journey and operator isolation. Run it only on a disposable database. GitHub Actions runs these checks automatically.
 
 For the JavaScript seat-selection regression, install `jsdom` outside the repository and set `NODE_PATH` to that installation's `node_modules`, then run `node tests/seatmap.cjs`.
+
+`tests/authentication.py` exercises logout, session replay, remember-token rotation, expiry, password changes across two clients, suspended/inactive accounts, changed roles, profile validation and login lockouts. It invokes PHP for fixture changes; set `UNIGO_TEST_PHP` when PHP is not on your PATH. Run it only against a disposable database.
 
 ## Layout
 

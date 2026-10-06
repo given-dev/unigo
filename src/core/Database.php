@@ -51,6 +51,8 @@ final class Database
                 PDO::ATTR_STRINGIFY_FETCHES  => false,
                 PDO::ATTR_PERSISTENT         => false,
             ]);
+            // Keep PHP DATETIME writes and SQL NOW() on the same clock.
+            $this->pdo->exec('SET time_zone = ' . $this->pdo->quote(date('P')));
         } catch (PDOException $e) {
             // Log to the server only. The user sees a friendly message.
             ErrorHandler::logCritical('Database connection failed: ' . $e->getMessage());

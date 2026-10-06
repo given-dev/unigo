@@ -26,7 +26,8 @@ final class RateLimiter
         $db = Database::instance();
         $window = (int) Config::get('security.login_window_seconds', 900);
         $maxAttempts = $scope === self::SCOPE_LOGIN
-            ? (int) Config::get('security.login_max_attempts', 5)
+            ? (int) Config::get(str_starts_with($identifier, 'ip:')
+                ? 'security.login_ip_max_attempts' : 'security.login_max_attempts', 5)
             : 60;
 
         $attempts = $db->count(

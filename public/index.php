@@ -51,7 +51,7 @@ $router->get('/register', [AuthController::class, 'showRegister']);
 $router->post('/register', [AuthController::class, 'register']);
 $router->get('/forgot-password', [AuthController::class, 'showForgot']);
 $router->post('/forgot-password', [AuthController::class, 'sendReset']);
-$router->get('/logout', [AuthController::class, 'logout']);
+$router->get('/logout', [AuthController::class, 'showLogout']);
 $router->post('/logout', [AuthController::class, 'logout']);
 
 // ---------------------------------------------------------------------------
@@ -79,6 +79,12 @@ $router->post('/bookings/{id}/cancel', [BookingController::class, 'cancel']);
 $router->post('/api/driver/location', [\App\Controllers\DriverLocationController::class, 'store']);
 $router->get('/api/tracking/{id}', [TrackingController::class, 'feed']);
 $router->get('/api/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+$router->get('/api/session', static function (): void {
+    Response::success([
+        'user_id' => \App\Core\Auth::id(),
+        'csrf' => \App\Core\Csrf::token(),
+    ])->send();
+});
 
 $router->get('/tracking', [TrackingController::class, 'index']);
 

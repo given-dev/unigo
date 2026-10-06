@@ -29,7 +29,12 @@ final class Http
     public static function back(string $fallback = '/'): void
     {
         $ref = $_SERVER['HTTP_REFERER'] ?? '';
-        if ($ref !== '' && str_starts_with($ref, self::hostOnly())) {
+        $origin = parse_url(self::hostOnly());
+        $source = parse_url($ref);
+        if (is_array($source) && !isset($source['user']) && !isset($source['pass'])
+            && ($source['scheme'] ?? '') === ($origin['scheme'] ?? '')
+            && strcasecmp($source['host'] ?? '', $origin['host'] ?? '') === 0
+            && ($source['port'] ?? null) === ($origin['port'] ?? null)) {
             self::redirect($ref);
         }
         self::redirect($fallback);

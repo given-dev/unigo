@@ -21,6 +21,7 @@ final class Auth
     private const SESSION_FP     = '_auth_fingerprint';
     private const SESSION_SEEN   = '_auth_last_seen';
     private const SESSION_START  = '_auth_started_at';
+    private const SESSION_VERSION = '_auth_password_version';
 
     private static ?array $cachedUser = null;
     private static ?array $cachedRoles = null;
@@ -54,6 +55,7 @@ final class Auth
 
         self::enforceTimeout();
         self::bindFingerprint();
+        self::validateSession();
     }
 
     /** Idle + absolute session expiry. */
@@ -71,7 +73,7 @@ final class Auth
         $started  = (int) ($_SESSION[self::SESSION_START] ?? time());
 
         if ((time() - $lastSeen) > $lifetime || (time() - $started) > $absolute) {
-            self::destroy();
+            self::logout();
             Flash::info('You were signed out because your session expired.');
         } else {
             $_SESSION[self::SESSION_SEEN] = time();
@@ -94,9 +96,28 @@ final class Auth
             ErrorHandler::log('warning', 'Session fingerprint mismatch - session terminated', [
                 'user_id' => $_SESSION[self::SESSION_USER] ?? null,
             ]);
-            self::destroy();
-            session_start();
+            self::logout();
         }
+    }
+
+    /** Recheck account state and permissions before any controller guard. */
+    private static function validateSession(): void
+    {
+        $id = self::id();
+        if ($id === null) {
+            return;
+        }
+        $user = Database::instance()->first('SELECT * FROM users WHERE id = ?', [$id]);
+        $version = $user ? hash('sha256', (string) $user['password_hash']) : '';
+        if (!$user || $user['status'] !== 'active'
+            || !hash_equals($version, (string) ($_SESSION[self::SESSION_VERSION] ?? ''))) {
+            self::logout();
+            Flash::info('Please sign in again. Your account or password has changed.');
+            return;
+        }
+        self::$cachedUser = $user;
+        self::$cachedRoles = self::rolesForUser($id);
+        $_SESSION[self::SESSION_ROLES] = self::$cachedRoles;
     }
 
     // ------------------------------------------------------------------
@@ -123,7 +144,6 @@ final class Auth
         // 1. per account limit
         $accountLimit = RateLimiter::check(RateLimiter::SCOPE_LOGIN, 'email:' . $email);
         if (!$accountLimit['allowed']) {
-            RateLimiter::hit(RateLimiter::SCOPE_LOGIN, 'email:' . $email, false);
             return ['ok' => false, 'user' => null, 'message' => $accountLimit['message']];
         }
 
@@ -145,7 +165,7 @@ final class Auth
         if (!password_verify($password, (string) $hash) || !$user) {
             RateLimiter::hit(RateLimiter::SCOPE_LOGIN, 'email:' . $email, false);
             RateLimiter::hit(RateLimiter::SCOPE_LOGIN, 'ip:' . $ip, false);
-            ActivityLog::record(ActivityLog::LOGIN_FAILED, (int) ($user['id'] ?? 0), 'user', 'Failed sign-in for ' . $email, (int) ($user['id'] ?? 0));
+            ActivityLog::record(ActivityLog::LOGIN_FAILED, $user ? (int) $user['id'] : null, 'user', 'Failed sign-in for ' . $email, $user ? (int) $user['id'] : null);
             return ['ok' => false, 'user' => null, 'message' => 'Invalid email or password.'];
         }
 
@@ -176,12 +196,15 @@ final class Auth
     /** Establish the authenticated session. */
     public static function login(array $user, bool $remember = false): void
     {
+        self::clearRememberCookie();
         self::regenerateId();
         $_SESSION[self::SESSION_USER]  = (int) $user['id'];
         $_SESSION[self::SESSION_ROLES] = self::rolesForUser((int) $user['id']);
         $_SESSION[self::SESSION_SEEN]  = time();
         $_SESSION[self::SESSION_START] = time();
         $_SESSION[self::SESSION_FP]    = hash('sha256', (string) ($_SERVER['HTTP_USER_AGENT'] ?? ''));
+        $_SESSION[self::SESSION_VERSION] = hash('sha256', (string) $user['password_hash']);
+        Csrf::rotate();
 
         self::$cachedUser = null;
         self::$cachedRoles = null;
@@ -203,6 +226,7 @@ final class Auth
             self::revokeRememberToken($userId);
             ActivityLog::record(ActivityLog::LOGOUT, $userId, 'user', 'Signed out');
         }
+        self::clearRememberCookie();
         self::destroy();
     }
 
@@ -228,6 +252,12 @@ final class Auth
 
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_destroy();
+        }
+        // Redirect messages and subsequent guest forms need a fresh session.
+        if (!Request::isCli() && !headers_sent()) {
+            session_id('');
+            session_start();
+            Csrf::rotate();
         }
     }
 
@@ -283,7 +313,7 @@ final class Auth
              GROUP BY u.id',
             [$id]
         );
-        if ($user && $user['status'] === 'suspended' && !Request::isCli()) {
+        if ((!$user || $user['status'] !== 'active') && !Request::isCli()) {
             self::logout();
             return null;
         }
@@ -518,8 +548,22 @@ final class Auth
     private static function revokeRememberToken(int $userId): void
     {
         Database::instance()->delete('remember_tokens', 'user_id = ?', [$userId]);
+    }
+
+    private static function clearRememberCookie(): void
+    {
+        $parts = explode(':', (string) ($_COOKIE['unigo_remember'] ?? ''));
+        if (count($parts) === 2) {
+            Database::instance()->delete('remember_tokens', 'selector = ? AND validator_hash = ?',
+                [$parts[0], hash('sha256', $parts[1])]);
+        }
+        unset($_COOKIE['unigo_remember']);
         if (!headers_sent()) {
-            setcookie('unigo_remember', '', ['expires' => time() - 42000, 'path' => '/']);
+            setcookie('unigo_remember', '', [
+                'expires' => time() - 42000, 'path' => '/',
+                'secure' => (bool) Config::get('session.secure', false),
+                'httponly' => true, 'samesite' => 'Lax',
+            ]);
         }
     }
 
@@ -531,6 +575,7 @@ final class Auth
         }
         $parts = explode(':', (string) $_COOKIE['unigo_remember']);
         if (count($parts) !== 2) {
+            self::clearRememberCookie();
             return;
         }
         [$selector, $validator] = $parts;
@@ -539,13 +584,20 @@ final class Auth
             [$selector]
         );
         if (!$row || !hash_equals((string) $row['validator_hash'], hash('sha256', $validator))) {
+            self::clearRememberCookie();
             return;
         }
         $user = Database::instance()->first('SELECT * FROM users WHERE id = ?', [(int) $row['user_id']]);
         if ($user && $user['status'] === 'active') {
-            Database::instance()->delete('remember_tokens', 'id = ?', [(int) $row['id']]);
+            // Only one concurrent request may consume this credential.
+            if (Database::instance()->delete('remember_tokens', 'id = ?', [(int) $row['id']]) !== 1) {
+                self::clearRememberCookie();
+                return;
+            }
             self::login($user);
             self::issueRememberToken((int) $user['id']);
+        } else {
+            self::clearRememberCookie();
         }
     }
 
@@ -555,15 +607,27 @@ final class Auth
 
     public static function changePassword(int $userId, string $current, string $new): bool
     {
+        if (!Validator::isStrongPassword($new)) {
+            throw new ValidationException(Validator::passwordHint());
+        }
         $user = Database::instance()->first('SELECT password_hash FROM users WHERE id = ?', [$userId]);
         if (!$user || !password_verify($current, (string) $user['password_hash'])) {
             return false;
         }
+        $newHash = self::hashPassword($new);
         Database::instance()->update('users', [
-            'password_hash'         => self::hashPassword($new),
+            'password_hash'         => $newHash,
             'must_change_password'  => 0,
             'password_changed_at'   => date('Y-m-d H:i:s'),
         ], 'id = ?', [$userId]);
+        self::revokeRememberToken($userId);
+        if (!Request::isCli() && self::id() === $userId) {
+            self::clearRememberCookie();
+            self::regenerateId();
+            $_SESSION[self::SESSION_VERSION] = hash('sha256', $newHash);
+            self::$cachedUser = null;
+            Csrf::rotate();
+        }
 
         ActivityLog::record(ActivityLog::PASSWORD_CHANGED, $userId, 'user', 'Password changed');
         return true;

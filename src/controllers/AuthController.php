@@ -158,12 +158,21 @@ final class AuthController extends Controller
         $this->redirect('/login');
     }
 
+    public function showLogout(): void
+    {
+        if (!Auth::check()) {
+            $this->redirect('/');
+        }
+        $this->view('auth/logout', ['title' => 'Sign out - ' . app_name()], 'layouts/auth');
+    }
+
     public function logout(): void
     {
+        $this->verifyCsrf();
         if (Auth::check()) {
             Auth::logout();
             Flash::success('You have been signed out.');
         }
-        $this->redirect('/login');
+        $this->redirect('/');
     }
 }
