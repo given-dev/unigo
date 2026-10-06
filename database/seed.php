@@ -30,6 +30,10 @@ if (PHP_SAPI !== 'cli') {
 
 define('BASE_PATH', dirname(__DIR__));
 require BASE_PATH . '/src/bootstrap.php';
+if (!is_demo_mode()) {
+    fwrite(STDERR, "Demo seeding is disabled. Use UNIGO_DEMO_MODE=1 only on a disposable test database.\n");
+    exit(1);
+}
 
 use App\Core\Auth;
 use App\Core\Database;

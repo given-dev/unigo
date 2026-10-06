@@ -96,7 +96,7 @@ final class TripController extends Controller
                 'from_stop_id'   => $this->request->int('from_stop_id') ?: null,
                 'to_stop_id'     => $this->request->int('to_stop_id') ?: null,
                 'pickup_point'   => $this->request->str('pickup_point'),
-                'payment_method' => $this->request->str('payment_method', 'mobile_money'),
+                'payment_method' => $this->request->str('payment_method', is_demo_mode() ? 'mobile_money' : 'cash'),
                 'notes'          => $this->request->str('notes'),
                 'is_simulated'   => is_demo_mode() ? 1 : 0,
             ], (int) Auth::id());

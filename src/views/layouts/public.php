@@ -78,8 +78,7 @@ $links   = [
                 delivery and fleet oversight &mdash; built for Kampala first, expandable to any city.
             </p>
             <p class="mt-3 text-xs">
-                Demo environment. Emergency hotline <?= e((string) Config::get('domain.emergency_hotline', '911')) ?>,
-                support <?= e((string) Config::get('domain.support_phone', '')) ?>.
+                <a href="<?= e(url('/support')) ?>">Contact support and emergency guidance</a>.
             </p>
         </div>
         <div>
@@ -104,7 +103,7 @@ $links   = [
         </div>
     </div>
     <p class="mt-6 text-xs" style="max-width:var(--content-max);margin-inline:auto">
-        &copy; <?= date('Y') ?> <?= e(app_name()) ?>. Built as a demonstration project.
+        &copy; <?= date('Y') ?> <?= e(app_name()) ?>. Travel and fleet management.
     </p>
 </footer>
 

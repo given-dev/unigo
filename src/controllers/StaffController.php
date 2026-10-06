@@ -153,7 +153,11 @@ final class StaffController extends Controller
                 if ($resource === 'trips') {
                     (new TripModel())->updateStatus($id,$status,(int) Auth::id(),$note);
                 } elseif ($resource === 'bookings') {
-                    if ($action === 'board' && $role === 'driver') {
+                    if ($action === 'collect_cash') {
+                        \App\Services\CashPaymentService::collect($id);
+                    } elseif ($action === 'refund_cash') {
+                        \App\Services\CashPaymentService::refund($id);
+                    } elseif ($action === 'board' && $role === 'driver') {
                         $trip = $db->first('SELECT status FROM trips WHERE id = ?', [(int) $row['trip_id']]);
                         if ($row['status'] !== 'confirmed' || !in_array($trip['status'],['boarding','in_transit'],true)) throw new ValidationException('Only confirmed bookings on boarding or running trips can board.');
                         $db->update('bookings',['boarded_at' => date('Y-m-d H:i:s')],'id = ?',[$id]);
@@ -262,10 +266,9 @@ final class StaffController extends Controller
     {
         if ($role === 'admin') {
             $key=$this->required('setting_key',80);
-            $allowed=['demo_mode','support_phone','support_email','cancellation_window_minutes'];
+            $allowed=['support_phone','support_email','emergency_hotline','cancellation_window_minutes'];
             if (!in_array($key,$allowed,true)) throw new ValidationException('This setting is not editable here.');
             $value=$this->required('setting_value',200);
-            if ($key === 'demo_mode' && !in_array($value,['0','1','true','false'],true)) throw new ValidationException('Demo mode accepts true or false.');
             if ($key === 'support_email' && !filter_var($value,FILTER_VALIDATE_EMAIL)) throw new ValidationException('Enter a valid support email.');
             if ($key === 'cancellation_window_minutes' && (!ctype_digit($value) || (int)$value > 1440)) throw new ValidationException('Enter a cancellation window from 0 to 1440 minutes.');
             SettingsService::set($key,$value);

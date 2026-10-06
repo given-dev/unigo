@@ -20,8 +20,8 @@ use App\Core\Config;
                 <span class="stat__icon mb-2"><i class="icon" data-icon="phone">phone</i></span>
                 <h3 class="card__title">Call us</h3>
                 <p class="text-sm text-muted-2 mb-0">
-                    Support: <a href="tel:<?= e((string) Config::get('domain.support_phone', '')) ?>"><?= e((string) Config::get('domain.support_phone', 'Not set')) ?></a><br>
-                    Emergency: <strong><?= e((string) Config::get('domain.emergency_hotline', '911')) ?></strong>
+                    Support: <a href="tel:<?= e((string) Config::get('domain.support_phone', '')) ?>"><?= e((string) (Config::get('domain.support_phone') ?: 'Not configured')) ?></a><br>
+                    Emergency: <strong><?= e((string) (Config::get('domain.emergency_hotline') ?: 'Not configured')) ?></strong>
                 </p>
             </div>
         </article>
@@ -30,8 +30,8 @@ use App\Core\Config;
                 <span class="stat__icon mb-2"><i class="icon" data-icon="mail">mail</i></span>
                 <h3 class="card__title">Email us</h3>
                 <p class="text-sm text-muted-2 mb-0">
-                    <a href="mailto:<?= e((string) Config::get('domain.support_email', 'support@unigo.test')) ?>">
-                        <?= e((string) Config::get('domain.support_email', 'support@unigo.test')) ?>
+                    <a href="mailto:<?= e((string) (Config::get('domain.support_email') ?: 'Not configured')) ?>">
+                        <?= e((string) (Config::get('domain.support_email') ?: 'Not configured')) ?>
                     </a>
                 </p>
             </div>
@@ -39,8 +39,8 @@ use App\Core\Config;
         <article class="card">
             <div class="card__body">
                 <span class="stat__icon mb-2"><i class="icon" data-icon="pin">pin</i></span>
-                <h3 class="card__title">Visit us</h3>
-                <p class="text-sm text-muted-2 mb-0">UniGo House, Kampala Road<br>Kampala, Uganda</p>
+                <h3 class="card__title">Support requests</h3>
+                <p class="text-sm text-muted-2 mb-0">Sign in to submit a tracked support request. Staff can configure contact details in Settings.</p>
             </div>
         </article>
     </div>

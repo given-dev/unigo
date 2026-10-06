@@ -36,6 +36,7 @@ final class GpsService
      */
     public static function record(int $vehicleId, float $lat, float $lon, float $speed = 0, float $heading = 0, string $source = 'gps_device', ?int $tripId = null, float $accuracy = 10): array
     {
+        if ($source === 'simulator' && !is_demo_mode()) throw new ValidationException('GPS simulation is disabled.');
         if (!\App\Core\Validator::isLatitude((string) $lat) || !\App\Core\Validator::isLongitude((string) $lon)) {
             throw new ValidationException('The coordinates received were not valid.');
         }
@@ -92,13 +93,14 @@ final class GpsService
     {
         if ($vehicleIds === []) return [];
         $limit = max(1, min(500, $limit));
+        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0';
         $sql = "SELECT v.id AS vehicle_id, v.registration_number, v.vehicle_type, v.status,
                        vl.latitude, vl.longitude, vl.speed, vl.heading, vl.recorded_at,
                        vl.source, vl.is_simulated, vl.trip_id,
                        o.company_name
                 FROM vehicles v
                 LEFT JOIN vehicle_locations vl ON vl.id = (
-                    SELECT id FROM vehicle_locations WHERE vehicle_id = v.id
+                    SELECT id FROM vehicle_locations WHERE vehicle_id = v.id $realOnly
                     ORDER BY recorded_at DESC, id DESC LIMIT 1
                 )
                 LEFT JOIN operators o ON o.id = v.operator_id
@@ -118,8 +120,9 @@ final class GpsService
 
     public static function latestForVehicle(int $vehicleId): ?array
     {
+        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0';
         return Database::instance()->first(
-            'SELECT * FROM vehicle_locations WHERE vehicle_id = ? ORDER BY recorded_at DESC, id DESC LIMIT 1',
+            "SELECT * FROM vehicle_locations WHERE vehicle_id = ? $realOnly ORDER BY recorded_at DESC, id DESC LIMIT 1",
             [$vehicleId]
         );
     }
@@ -131,12 +134,13 @@ final class GpsService
      */
     public static function trail(int $vehicleId, int $minutes = 60, int $limit = 200): array
     {
+        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0';
         $minutes = max(1, min(1440, $minutes));
         $limit = max(1, min(1000, $limit));
         return Database::instance()->select(
             "SELECT latitude, longitude, speed, heading, recorded_at, is_simulated
              FROM vehicle_locations
-             WHERE vehicle_id = ? AND recorded_at >= (NOW() - INTERVAL ? MINUTE)
+             WHERE vehicle_id = ? $realOnly AND recorded_at >= (NOW() - INTERVAL ? MINUTE)
              ORDER BY recorded_at ASC
              LIMIT $limit",
             [$vehicleId, $minutes]
@@ -158,6 +162,7 @@ final class GpsService
      */
     public static function simulateStep(?int $tripId = null): array
     {
+        if (!is_demo_mode()) throw new ValidationException('GPS simulation is disabled.');
         $db = Database::instance();
         $trips = $tripId
             ? $db->select("SELECT * FROM trips WHERE id = ? AND status = 'in_transit'", [$tripId])

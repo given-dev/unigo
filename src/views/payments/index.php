@@ -16,7 +16,7 @@ $paginator = $paginator ?? null;
     <div class="section__head">
         <div>
             <h2 class="section__title">Payments</h2>
-            <p class="text-sm text-muted-2 mb-0">All transactions are simulated in this demo.</p>
+            <p class="text-sm text-muted-2 mb-0"><?= is_demo_mode() ? 'Test payment history.' : 'Receipts for payments confirmed by authorised staff.' ?></p>
         </div>
     </div>
 

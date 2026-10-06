@@ -41,7 +41,7 @@ final class TrackingController extends Controller
         $this->view('tracking/index', [
             'title'      => 'Track a trip - ' . app_name(),
             'pageTitle'  => 'Live tracking',
-            'pageSub'    => 'Vehicle positions are simulated in this demo',
+            'pageSub'    => is_demo_mode() ? 'Test vehicle positions' : 'Latest driver-reported vehicle positions',
             'trips'      => $trips,
             'trip'       => $trip,
             'mapConfig'  => $map,

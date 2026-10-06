@@ -78,7 +78,7 @@ final class BookingController extends Controller
                 trim($this->request->str('reason')),
                 Auth::isAdmin()
             );
-            Flash::success('Booking cancelled. Any eligible refund has been processed.');
+            Flash::success('Booking cancelled. If you paid cash, contact staff to arrange its return.');
         } catch (\App\Core\AppException $e) {
             Flash::error($e->getMessage());
         } catch (\Throwable $e) {

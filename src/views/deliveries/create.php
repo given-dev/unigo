@@ -77,7 +77,7 @@ $old = \App\Core\Flash::oldAll();
                 </div>
                 <p class="text-sm text-muted-2 mt-3 mb-0">
                     <i class="icon icon--sm" data-icon="info">info</i>
-                    Pricing is estimated from weight. This is a simulated demo environment.
+                    Pricing is estimated from weight. Staff will confirm pickup and delivery arrangements.
                 </p>
             </div>
             <div class="card__footer flex items-center justify-end">

@@ -18,6 +18,7 @@ jobs:
           --health-timeout=5s
           --health-retries=15
     env:
+      UNIGO_DEMO_MODE: '1'
       UNIGO_DB_HOST: 127.0.0.1
       UNIGO_DB_USER: root
       UNIGO_DB_PASS: root
@@ -69,3 +70,15 @@ jobs:
           python tests/journey.py
           python tests/authentication.py
           python tests/workflows.py
+      - name: Real cash operations
+        env:
+          UNIGO_DEMO_MODE: '0'
+          UNIGO_DB_NAME: unigo_operations_tests
+        run: |
+          php scripts/install.php
+          php scripts/install.php
+          php tests/operations.php
+          php -S 127.0.0.1:8001 -t public scripts/router.php > "$RUNNER_TEMP/unigo-operations.log" 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid"' EXIT
+          python tests/operational_journey.py http://127.0.0.1:8001

@@ -153,11 +153,11 @@ final class BookingModel extends BaseModel
         $tripId = (int) $data['trip_id'];
         $passengerId = (int) $data['passenger_id'];
         $seat = strtoupper(trim((string) $data['seat_number']));
-        $payMethod = $data['payment_method'] ?? 'mobile_money';
-        if (!in_array($payMethod, ['mobile_money', 'card', 'wallet', 'cash'], true)) {
-            throw new ValidationException('Choose a valid payment method.');
+        $payMethod = $data['payment_method'] ?? (is_demo_mode() ? 'mobile_money' : 'cash');
+        if (!in_array($payMethod, array_column(PaymentService::methods(), 'value'), true)) {
+            throw new ValidationException('Choose an available payment method. Online payments are not configured.');
         }
-        $isSimulated = (int) ($data['is_simulated'] ?? 0);
+        $isSimulated = is_demo_mode() ? (int) ($data['is_simulated'] ?? 0) : 0;
 
         $db = $this->db;
 

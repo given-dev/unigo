@@ -6,11 +6,16 @@ PHP 8 / MySQL transport and parcel management for Uganda. No Composer build is r
 
 1. Copy or clone this repository into `C:\xampp\htdocs\unigo`.
 2. Start Apache and MySQL in XAMPP.
-3. Open phpMyAdmin and import `database/schema.sql`. **This schema recreates tables; use a new database, not an existing live installation.**
-4. Open a terminal in the project folder and seed the demo accounts:
+3. Configure the database environment variables below and initialize a fresh database from the project folder:
 
    ```bat
-   C:\xampp\php\php.exe database\seed.php
+   C:\xampp\php\php.exe scripts\install.php
+   ```
+
+4. Register your own account, then grant it the first administrator role locally:
+
+   ```bat
+   C:\xampp\php\php.exe scripts\admin.php --email=your-registered-email
    ```
 
 5. Visit `http://localhost/unigo/public/`.
@@ -22,11 +27,11 @@ Apache needs `mod_rewrite` and permission to read `.htaccess`. PHP needs PDO MyS
 With PHP and a running MySQL/MariaDB database:
 
 ```sh
-php database/seed.php
+php scripts/install.php
 php -S 127.0.0.1:8000 -t public scripts/router.php
 ```
 
-Open `http://127.0.0.1:8000`. This is a development server.
+Open `http://127.0.0.1:8000`. This is a development server. Register your own account, then run `php scripts/admin.php --email=your-registered-email` in another terminal. Sign in again to open the administrator workspace. Initial administrator creation is available only through this local CLI; additional administrators use the Users workspace.
 
 ## Configuration
 
@@ -42,7 +47,13 @@ Dynamic pages use `no-store`. Restoring a page with Back or returning to another
 
 For an existing local clone, update the files with `git pull --ff-only origin main`. An update does not require reimporting the database or rerunning the demo seeder. Do not reimport `schema.sql` into a database containing data you want to keep.
 
-## Demo accounts
+## Optional test mode
+
+Normal operation defaults to `UNIGO_DEMO_MODE=0`. The installer creates empty tables and roles, never sample accounts or trips, and preserves an existing complete database. Administrators approve operators and set support contacts; operators create fleets, drivers, routes and trips. Do not import `database/schema.sql` over existing data.
+
+For disposable demonstration/testing databases only, explicitly set `UNIGO_DEMO_MODE=1`, select a separate database with `UNIGO_DB_NAME`, run `php scripts/install.php`, and then `php database/seed.php`. `UNIGO_ENV=production` disables test mode even if that flag is set. A database setting cannot enable it.
+
+### Demo accounts
 
 All seeded accounts use password `UniGo@2026`:
 
@@ -62,7 +73,7 @@ The interface uses a green and white theme, company cards, cleaner search/result
 
 ## Workspaces
 
-- Passenger: registration, trip search, seat selection, segment fares, demo payments, cancellation/refunds, tracking, parcel requests, notifications, complaints, emergencies, and ratings.
+- Passenger: registration, trip search, seat selection, segment fares, cash receipts, cancellation/refunds, tracking, parcel requests, notifications, complaints, emergencies, and ratings.
 - Admin: account creation/status, operator approval, fleet/driver/route creation and status, scheduling/dispatch, bookings, parcel assignment, payment ledger, emergency and complaint handling, rating visibility, audit, reports, settings.
 - Operator: own fleet, drivers, routes, trips, manifests, bookings, revenue reports, company settings.
 - Driver: assigned trips, passenger boarding, trip lifecycle, assigned parcels, phone GPS reporting, ratings and emergency records. Earnings displays passenger fares on assigned trips; payouts and commissions are not calculated.
@@ -72,9 +83,9 @@ Staff lists support search and pagination. Mutations require a session, the matc
 
 ## External integrations and limits
 
-Payments, including wallet checkout, use a **mock gateway** and move no real money. Replace `PaymentGatewayInterface`'s mock adapter with a payment-provider adapter and credentials before enabling real checkout. No stored-value wallet or payout settlement is implemented.
+Normal operation offers cash only. Bookings start unpaid. Assigned drivers, owning operators, and administrators record cash received through the Bookings workspace, creating a receipt with the responsible staff member and updating revenue. Duplicate collection is rejected. Cancelling a paid cash booking does not claim money was returned: owning operators or administrators must confirm cash returned through the same workspace. Online payments fail before creating a receipt until a provider adapter is configured. Mock payments, wallet checkout, and GPS simulation require explicit test mode. No stored-value wallet or payout settlement is implemented.
 
-Seeded GPS is simulated. Driver phone location reports use browser geolocation and are stored as real device reports; HTTPS or localhost and location permission are required. Passenger tracking polls only trips with an owned active booking. Maps require access to Leaflet and OpenStreetMap.
+Simulated positions are excluded from normal tracking, including the location trail. Driver phone location reports use browser geolocation and are stored as real device reports; HTTPS or localhost and location permission are required. Passenger tracking polls only trips with an owned active booking. Maps require access to Leaflet and OpenStreetMap.
 
 Password-reset email delivery, SMS, USSD, automatic police dispatch, production payment integrations, hardware GPS, and regulatory verification require providers or operational processes. The current password-reset page explicitly directs users to support and does not claim an email was sent.
 
@@ -82,7 +93,20 @@ Fleet/route creation and status changes are supported; editing seat layouts, int
 
 ## Tests
 
-Use a **disposable seeded database** for backend tests:
+For real-mode regressions, select a **disposable empty database** and run:
+
+```sh
+export UNIGO_DB_NAME=unigo_operations_tests UNIGO_DEMO_MODE=0
+php scripts/install.php
+php tests/operations.php
+php -S 127.0.0.1:8000 -t public scripts/router.php
+# In another terminal with the same environment:
+python tests/operational_journey.py http://127.0.0.1:8000
+```
+
+`operations.php` rolls back its fixtures and checks staff authorization, duplicate collection, actual cash refunds, disabled mock payments, and real location filtering. The HTTP journey creates accounts and operational records; never run it on a live database.
+
+The existing test suites require a separate **disposable seeded database** and `UNIGO_DEMO_MODE=1` in both the server and test processes:
 
 ```sh
 php tests/booking.php

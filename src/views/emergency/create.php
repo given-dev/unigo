@@ -63,7 +63,7 @@ $demo       = (bool) ($demo ?? false);
                     </div>
                     <div class="field">
                         <label class="label" for="contact_phone">Callback phone</label>
-                        <input class="input" id="contact_phone" name="contact_phone" maxlength="30">
+                        <input class="input" id="contact_phone" name="contact_phone" maxlength="25">
                     </div>
                     <div class="field" style="grid-column:1 / -1">
                         <label class="label" for="description">Describe the situation</label>
@@ -71,7 +71,7 @@ $demo       = (bool) ($demo ?? false);
                     </div>
                     <label class="check">
                         <input type="checkbox" name="notify_police" value="1">
-                        <span>Also notify the police</span>
+                        <span>Request staff coordination with police (no automatic dispatch)</span>
                     </label>
                 </div>
             </div>

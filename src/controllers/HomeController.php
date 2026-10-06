@@ -108,7 +108,7 @@ final class HomeController extends Controller
     {
         return [
             ['title' => 'What we collect', 'body' => 'Account details you provide (name, email, phone), trip and booking history, delivery records, and the device data needed to run the service. Location is only shared while you actively track a trip.'],
-            ['title' => 'How we use it', 'body' => 'To match you with trips, process bookings and payments, keep drivers and operators coordinated, and improve safety. Payments are simulated in this demonstration environment.'],
+            ['title' => 'How we use it', 'body' => 'To match you with trips, process bookings and payments, keep drivers and operators coordinated, and improve safety. Cash receipts are recorded after staff confirm receipt.'],
             ['title' => 'Who can see it', 'body' => 'Operators see the bookings on their own trips. Authorities see anonymised network data and safety reports. We never sell personal data.'],
             ['title' => 'Your choices', 'body' => 'You can update your profile, control notifications, and request deletion of your account at any time from your dashboard or by contacting support.'],
         ];
@@ -119,9 +119,9 @@ final class HomeController extends Controller
     {
         return [
             ['title' => 'Using UniGo', 'body' => 'You agree to provide accurate details, keep your password secure, and use the platform lawfully. Accounts that abuse the service may be suspended.'],
-            ['title' => 'Bookings and payments', 'body' => 'Fares are confirmed at the time of booking. In this demo, all payment flows are simulated and no real money moves.'],
+            ['title' => 'Bookings and payments', 'body' => 'Fares are confirmed at the time of booking. Cash payments and returns are confirmed by authorized staff. Online payments require a configured provider.'],
             ['title' => 'Deliveries', 'body' => 'Parcel contents must be lawful and accurately described. UniGo may refuse or return items that breach these terms.'],
-            ['title' => 'Demo environment', 'body' => 'UniGo is a demonstration project. Trips, GPS traces, emergency alerts, predictions and payments are simulated for evaluation purposes.'],
+            ['title' => 'Safety and location', 'body' => 'Locations depend on drivers sharing their device position. SOS requests are recorded for staff review and do not automatically dispatch police or emergency services. Contact local emergency services directly when urgent.'],
         ];
     }
 }

@@ -14,7 +14,7 @@ $noIndex = true;
 $features = [
     ['icon' => 'search',        'text' => 'Search live trips across buses, taxis, boda-bodas and shared rides.'],
     ['icon' => 'ticket',        'text' => 'Lock a seat with instant, conflict free booking.'],
-    ['icon' => 'navigation',    'text' => 'Follow your vehicle on a live (demo) map with ETA updates.'],
+    ['icon' => 'navigation',    'text' => 'Follow your vehicle on a map using shared driver locations with ETA updates.'],
     ['icon' => 'siren',         'text' => 'One tap SOS with instant alerts to the driver and authority.'],
     ['icon' => 'package',       'text' => 'Send parcels on the same fleet and track them end to end.'],
     ['icon' => 'bar-chart',     'text' => 'Operators and the authority get revenue, safety and usage insight.'],

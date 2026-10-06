@@ -26,6 +26,9 @@ final class PaymentService
     public static function gateway(): PaymentGatewayInterface
     {
         if (self::$gateway === null) {
+            if (!Config::get('domain.demo_mode', false)) {
+                throw new \App\Core\ConflictException('Online payments are not configured. Choose cash and pay authorised staff.');
+            }
             // To go live, swap this for a real adapter, e.g.
             //   self::$gateway = new MtnMobileMoneyGateway(MtnConfig::fromConfig());
             // No controller or model changes would be required.
@@ -36,12 +39,18 @@ final class PaymentService
 
     public static function useGateway(PaymentGatewayInterface $gateway): void
     {
+        if ($gateway instanceof MockPaymentGateway && !Config::get('domain.demo_mode', false)) {
+            throw new \App\Core\ConflictException('Simulated payments are disabled.');
+        }
         self::$gateway = $gateway;
     }
 
     /** Methods offered on the checkout screen. */
     public static function methods(): array
     {
+        if (!Config::get('domain.demo_mode', false)) {
+            return [['value' => 'cash', 'label' => 'Cash', 'hint' => 'Reserve your seat, then pay authorised staff', 'icon' => 'cash']];
+        }
         return [
             ['value' => 'mobile_money', 'label' => 'Mobile Money', 'hint' => 'MTN MoMo / Airtel Money (simulated)', 'icon' => 'phone'],
             ['value' => 'card',         'label' => 'Card',         'hint' => 'Tokenised card (simulated)', 'icon' => 'card'],
@@ -52,6 +61,7 @@ final class PaymentService
 
     public static function isMock(): bool
     {
+        if (self::$gateway === null && !Config::get('domain.demo_mode', false)) return false;
         return self::gateway() instanceof MockPaymentGateway;
     }
 
@@ -63,6 +73,10 @@ final class PaymentService
      */
     public static function charge(int $userId, float $amount, string $method, array $context = [], ?int $actorId = null): array
     {
+        if (!Config::get('domain.demo_mode', false) && $method === 'cash') {
+            throw new \App\Core\ConflictException('Cash collection must be confirmed by authorised staff.');
+        }
+        $gateway = self::gateway();
         $db = Database::instance();
         $model = new PaymentModel();
         $reference = ReferenceGenerator::generate('payment');
@@ -149,7 +163,7 @@ final class PaymentService
         $db = Database::instance();
         $model = new PaymentModel();
         $payments = $db->select(
-            "SELECT * FROM payments WHERE booking_id = ? AND status = 'successful' FOR UPDATE",
+            "SELECT * FROM payments WHERE booking_id = ? AND status = 'successful' AND (method <> 'cash' OR is_mock = 1) FOR UPDATE",
             [$bookingId]
         );
 

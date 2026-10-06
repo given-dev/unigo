@@ -215,7 +215,7 @@ if (!function_exists('transport_label')) {
 if (!function_exists('is_demo_mode')) {
     function is_demo_mode(): bool
     {
-        return (bool) Config::get('domain.demo_mode', true);
+        return (bool) Config::get('domain.demo_mode', false);
     }
 }
 

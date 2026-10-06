@@ -164,10 +164,9 @@ $perRow = max(1, $perRow);
                             <div class="field">
                                 <label class="label" for="payment_method">Payment</label>
                                 <select class="select" id="payment_method" name="payment_method">
-                                    <option value="mobile_money">Mobile money (simulated)</option>
-                                    <option value="card">Card (simulated)</option>
-                                    <option value="wallet">UniGo wallet</option>
-                                    <option value="cash">Pay the driver (cash)</option>
+                                    <?php foreach (\App\Services\PaymentService::methods() as $method): ?>
+                                    <option value="<?= e($method['value']) ?>"><?= e($method['label']) ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="field">
@@ -178,7 +177,7 @@ $perRow = max(1, $perRow);
 
                         <p class="text-sm text-muted-2 mt-3 mb-0">
                             <i class="icon icon--sm" data-icon="info">info</i>
-                            Payments are simulated in this demo environment.
+                            <?= is_demo_mode() ? 'Online payments are simulated in this test environment.' : 'Your seat is reserved unpaid. Pay authorised staff; your receipt appears after they confirm receiving cash.' ?>
                         </p>
                     </div>
                     <div class="card__footer">

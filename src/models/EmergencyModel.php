@@ -102,7 +102,7 @@ final class EmergencyModel extends BaseModel
                 'status'          => 'new',
                 'severity'        => $severity,
                 'notify_police'   => (int) ($data['notify_police'] ?? 0),
-                'is_simulated'    => (int) ($data['is_simulated'] ?? 0),
+                'is_simulated'    => is_demo_mode() ? (int) ($data['is_simulated'] ?? 0) : 0,
             ]);
 
             $this->alertResponders($id, $reference, $type, $vehicleId, $tripId);
