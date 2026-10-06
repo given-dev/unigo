@@ -46,6 +46,7 @@ jobs:
         run: |
           npm install --prefix "$RUNNER_TEMP/unigo-tests" jsdom
           NODE_PATH="$RUNNER_TEMP/unigo-tests/node_modules" node tests/seatmap.cjs
+          NODE_PATH="$RUNNER_TEMP/unigo-tests/node_modules" node tests/confirmation.cjs
       - name: Role and full journey tests
         run: |
           php -S 127.0.0.1:8000 -t public scripts/router.php > "$RUNNER_TEMP/unigo-server.log" 2>&1 &
