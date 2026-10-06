@@ -78,6 +78,7 @@ return [
         'mime_types' => ['image/jpeg', 'image/png', 'image/webp'],
         'avatars'    => 'uploads/avatars',
         'operators'  => 'uploads/operators',
+        'vehicles'   => 'uploads/vehicles',
     ],
 
     // ------------------------------------------------------------------

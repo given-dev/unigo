@@ -110,6 +110,20 @@ $editable=in_array($role,['admin','operator'],true) || ($role === 'authority' &&
 <?php endif; ?>
 <?php if ($resource === 'deliveries' && $role === 'admin' && $row['status'] === 'created'): ?>
 <form method="post" action="<?= e(url($path)) ?>"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><input type="hidden" name="action" value="assign"><select class="select" name="vehicle_id" aria-label="Assigned vehicle" required><?php foreach ($choices['vehicles'] ?? [] as $option): ?><option value="<?= (int)$option['id'] ?>"><?= e($option['label']) ?></option><?php endforeach; ?></select><button class="btn btn--secondary btn--sm" type="submit">Assign vehicle</button></form><?php endif; ?>
+<?php if ($resource === 'vehicles' && in_array($role,['admin','operator'],true)):
+    $rowPhotos = $photos[(int)$row['id']] ?? [];
+    $maxMb = (int) round((int) \App\Core\Config::get('uploads.max_bytes', 2097152) / 1048576); ?>
+<details class="photo-box"><summary>Photos (<?= count($rowPhotos) ?>)</summary>
+<?php if ($rowPhotos): ?><div class="photo-box__grid"><?php foreach ($rowPhotos as $photo): ?>
+<figure class="photo-box__item"><img src="<?= e(url('/' . $photo['image_path'])) ?>" alt="Vehicle photo" loading="lazy">
+<form method="post" action="<?= e(url($path)) ?>" data-confirm="Remove this photo?"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><input type="hidden" name="image_id" value="<?= (int)$photo['id'] ?>"><input type="hidden" name="action" value="delete_photo"><button class="btn btn--ghost btn--sm" type="submit">Remove</button></form></figure>
+<?php endforeach; ?></div><?php else: ?>
+<p class="text-sm text-muted-2 mb-0">No photos yet. Uploaded photos help passengers recognise this vehicle.</p><?php endif; ?>
+<form method="post" action="<?= e(url($path)) ?>" enctype="multipart/form-data" class="mt-2"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><input type="hidden" name="action" value="upload_photo">
+<div class="flex gap-2"><input class="input" type="file" name="photo" accept="image/jpeg,image/png,image/webp" required aria-label="Vehicle photo"><button class="btn btn--secondary btn--sm" type="submit">Upload photo</button></div>
+<p class="text-sm text-muted-2 mb-0">JPG, PNG or WebP up to <?= $maxMb ?> MB &middot; max <?= (int) \App\Models\VehicleModel::MAX_PHOTOS ?> photos.</p>
+</form></details>
+<?php endif; ?>
 </td></tr><?php endforeach; ?>
 <?php if (!$rows): ?><tr><td colspan="<?= count($columns)+1 ?>">No records found.</td></tr><?php endif; ?>
 </tbody></table></div>

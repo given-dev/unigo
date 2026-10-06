@@ -17,6 +17,71 @@ final class VehicleModel extends BaseModel
 
     public const TYPES = ['bus', 'electric_bus', 'taxi', 'boda', 'shared_ride', 'truck', 'boat'];
     public const STATUSES = ['active', 'inactive', 'on_trip', 'maintenance', 'suspended'];
+    public const MAX_PHOTOS = 8;
+
+    /** SQL expression returning a vehicle's cover photo (query must alias vehicles as $alias). */
+    public static function coverSql(string $alias = 'v'): string
+    {
+        return "(SELECT vi.image_path FROM vehicle_images vi WHERE vi.vehicle_id = {$alias}.id
+                 ORDER BY vi.sort_order ASC, vi.id ASC LIMIT 1) AS vehicle_image";
+    }
+
+    /** All photos for one vehicle, cover first. */
+    public function images(int $vehicleId): array
+    {
+        return $this->db->select(
+            'SELECT id, vehicle_id, image_path, caption FROM vehicle_images WHERE vehicle_id = ? ORDER BY sort_order ASC, id ASC',
+            [$vehicleId]
+        );
+    }
+
+    /** Photos grouped by vehicle_id for a page of rows. @return array<int,array<int,array<string,mixed>>> */
+    public function photosFor(array $vehicleIds): array
+    {
+        $ids = array_values(array_unique(array_map('intval', $vehicleIds)));
+        if (!$ids) {
+            return [];
+        }
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $grouped = [];
+        foreach ($this->db->select(
+            "SELECT id, vehicle_id, image_path FROM vehicle_images WHERE vehicle_id IN ($in) ORDER BY sort_order ASC, id ASC",
+            $ids
+        ) as $row) {
+            $grouped[(int) $row['vehicle_id']][] = $row;
+        }
+        return $grouped;
+    }
+
+    public function photoCount(int $vehicleId): int
+    {
+        return $this->db->count('SELECT COUNT(*) FROM vehicle_images WHERE vehicle_id = ?', [$vehicleId]);
+    }
+
+    public function addImage(int $vehicleId, string $path, string $caption = ''): int
+    {
+        return $this->db->insert('vehicle_images', [
+            'vehicle_id' => $vehicleId,
+            'image_path' => $path,
+            'caption'    => mb_substr($caption, 0, 120),
+            'sort_order' => $this->photoCount($vehicleId),
+        ]);
+    }
+
+    /** Removes the row and returns the stored path so the caller can unlink the file. */
+    public function removeImage(int $imageId, int $vehicleId): ?string
+    {
+        $image = $this->db->first(
+            'SELECT id, image_path FROM vehicle_images WHERE id = ? AND vehicle_id = ?',
+            [$imageId, $vehicleId]
+        );
+        if (!$image) {
+            return null;
+        }
+        $this->db->delete('vehicle_images', 'id = ?', [$imageId]);
+        return (string) $image['image_path'];
+    }
+
 
     public function findDetailed(int $id): ?array
     {
@@ -163,10 +228,14 @@ final class VehicleModel extends BaseModel
             ];
         }
         if ($rows) {
+            $params = [];
+            foreach ($rows as $row) {
+                array_push($params, ...array_values($row));
+            }
             $this->db->run(
                 'INSERT INTO seats (vehicle_id, seat_number, seat_type, row_number, is_active) VALUES '
                 . implode(',', array_map(static fn (array $r) => '(?,?,?,?,?)', $rows)),
-                array_merge(...array_values($rows))
+                $params
             );
         }
         return count($rows);

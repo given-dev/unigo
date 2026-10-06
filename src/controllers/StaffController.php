@@ -65,7 +65,7 @@ final class StaffController extends Controller
     {
         [$role, $resource, $entry] = $this->workspace();
         $db = Database::instance();
-        $rows = []; $columns = []; $paginator = null; $map = null; $report = [];
+        $rows = []; $columns = []; $paginator = null; $map = null; $report = []; $photos = [];
         if (isset(self::RESOURCES[$resource])) {
             [$table, $select] = self::RESOURCES[$resource];
             [$where, $params] = $this->scope($role, $resource);
@@ -80,6 +80,9 @@ final class StaffController extends Controller
             $paginator = new Paginator($total, $this->request->int('page', 1), 20);
             $rows = $db->select("SELECT $select FROM `$table` WHERE $where ORDER BY id DESC LIMIT " . $paginator->limit() . ' OFFSET ' . $paginator->offset(), $params);
             $columns = explode(',', $select);
+            if ($resource === 'vehicles' && $rows) {
+                $photos = (new VehicleModel())->photosFor(array_map(static fn (array $r): int => (int) $r['id'], $rows));
+            }
         } elseif (in_array($resource, ['monitor', 'tracking'], true)) {
             $ids = null;
             if ($role === 'driver') {
@@ -117,7 +120,7 @@ final class StaffController extends Controller
             if (!$db->exists("SELECT 1 FROM trips WHERE id = ? AND ($where)", array_merge([$id],$params))) throw new AuthorizationException('This trip is outside your workspace.');
             $manifest = (new BookingModel())->passengersForTrip($id);
         }
-        $this->view('staff/workspace', compact('role','resource','rows','columns','paginator','choices','map','report','manifest') + [
+        $this->view('staff/workspace', compact('role','resource','rows','columns','paginator','choices','map','report','manifest','photos') + [
             'title' => $entry[0] . ' - UniGo', 'pageTitle' => $entry[0], 'pageSub' => $entry[1], 'withLeaflet' => $map !== null,
         ], 'layouts/app');
     }
@@ -136,6 +139,15 @@ final class StaffController extends Controller
     {
         [$role,$resource] = $this->workspace();
         $this->verifyCsrf();
+        $action = $this->request->str('action');
+        if ($resource === 'vehicles' && in_array($action, ['upload_photo','delete_photo'], true)) {
+            try {
+                if ($action === 'upload_photo') { $this->uploadVehiclePhoto($role); Flash::success('Photo uploaded. Passengers can now see this vehicle.'); }
+                else { $this->deleteVehiclePhoto($role); Flash::success('Photo removed.'); }
+            } catch (\App\Core\AppException $e) { Flash::error($e->getMessage());
+            } catch (\Throwable $e) { \App\Core\ErrorHandler::log('error','Vehicle photo failed: ' . $e->getMessage()); Flash::error('The photo could not be saved. Check the file and try again.'); }
+            $this->redirect($this->request->path());
+        }
         $db = Database::instance();
         try {
             $db->transaction(function () use ($db,$role,$resource): void {
@@ -203,6 +215,64 @@ final class StaffController extends Controller
         } catch (\App\Core\AppException $e) { Flash::error($e->getMessage());
         } catch (\Throwable $e) { \App\Core\ErrorHandler::log('error','Staff update failed: ' . $e->getMessage()); Flash::error('The change could not be saved. Check the values and try again.'); }
         $this->redirect($this->request->path());
+    }
+
+    private function ownedVehicle(int $id, string $role): void
+    {
+        [$where,$params] = $this->scope($role,'vehicles');
+        if (!Database::instance()->exists("SELECT 1 FROM vehicles WHERE id = ? AND ($where)", array_merge([$id],$params))) {
+            throw new AuthorizationException('This vehicle is outside your workspace.');
+        }
+    }
+
+    private function uploadVehiclePhoto(string $role): void
+    {
+        $vehicleId = $this->request->int('id');
+        if ($vehicleId < 1) throw new ValidationException('Choose a vehicle.');
+        $this->ownedVehicle($vehicleId, $role);
+
+        $file = $this->request->file('photo');
+        if (!$file) throw new ValidationException('Choose a photo to upload.');
+        if ((int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) throw new ValidationException('The upload did not complete. Check the file size and try again.');
+        $maxBytes = (int) \App\Core\Config::get('uploads.max_bytes', 2 * 1024 * 1024);
+        if ((int) $file['size'] > $maxBytes) throw new ValidationException('Photos must be at most ' . (int) round($maxBytes / 1048576) . ' MB.');
+        $allowed = (array) \App\Core\Config::get('uploads.mime_types', ['image/jpeg','image/png','image/webp']);
+        $mime = (string) (new \finfo(FILEINFO_MIME_TYPE))->file((string) $file['tmp_name']);
+        $ext = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'][$mime] ?? '';
+        if ($ext === '' || !in_array($mime, $allowed, true)) throw new ValidationException('Upload a JPG, PNG or WebP image.');
+
+        $model = new VehicleModel();
+        if ($model->photoCount($vehicleId) >= VehicleModel::MAX_PHOTOS) {
+            throw new ValidationException('This vehicle already has ' . VehicleModel::MAX_PHOTOS . ' photos. Remove one before adding another.');
+        }
+        $rel = (string) \App\Core\Config::get('uploads.vehicles', 'uploads/vehicles');
+        $dir = PUBLIC_PATH . '/' . $rel . '/' . $vehicleId;
+        if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) throw new ValidationException('The upload folder is not writable on this server.');
+        $name = bin2hex(random_bytes(8)) . '.' . $ext;
+        $dest = $dir . '/' . $name;
+        if (!move_uploaded_file((string) $file['tmp_name'], $dest)) throw new ValidationException('The photo could not be saved on the server.');
+        @chmod($dest, 0644);
+        try {
+            $model->addImage($vehicleId, $rel . '/' . $vehicleId . '/' . $name);
+        } catch (\Throwable $e) {
+            @unlink($dest);
+            throw $e;
+        }
+        ActivityLog::record('staff.created', $vehicleId, 'vehicles', 'Uploaded a vehicle photo');
+    }
+
+    private function deleteVehiclePhoto(string $role): void
+    {
+        $imageId = $this->request->int('image_id');
+        $vehicleId = $this->request->int('id');
+        if ($imageId < 1 || $vehicleId < 1) throw new ValidationException('Photo not found.');
+        $this->ownedVehicle($vehicleId, $role);
+        $path = (new VehicleModel())->removeImage($imageId, $vehicleId);
+        if ($path === null) throw new NotFoundException('Photo not found.');
+        $public = realpath(PUBLIC_PATH);
+        $file = realpath(PUBLIC_PATH . '/' . $path);
+        if ($public && $file && str_starts_with($file, $public . DIRECTORY_SEPARATOR)) @unlink($file);
+        ActivityLog::record('staff.updated', $vehicleId, 'vehicles', 'Removed a vehicle photo');
     }
 
     private function enum(string $value,array $values): void

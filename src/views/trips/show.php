@@ -83,6 +83,22 @@ $perRow = max(1, $perRow);
                 <div><span class="text-muted-2">Driver</span><br><strong><?= e(trim((string) ($trip['driver_first_name'] ?? '') . ' ' . (string) ($trip['driver_last_name'] ?? '')) ?: 'Assigned soon') ?></strong></div>
                 <div><span class="text-muted-2">Seats free</span><br><strong><?= (int) $free ?> of <?= (int) $total ?></strong></div>
             </div>
+
+            <?php if (!empty($trip['images'])): ?>
+                <div class="vehicle-gallery mt-3">
+                    <p class="text-sm text-muted-2 mb-2">
+                        <i class="icon icon--xs" data-icon="bus">bus</i>
+                        Your vehicle &mdash; look for <strong><?= e($trip['registration_number'] ?? '') ?></strong> when you arrive
+                    </p>
+                    <div class="vehicle-gallery__row">
+                        <?php foreach ($trip['images'] as $photo): ?>
+                            <a href="<?= e(url('/' . $photo['image_path'])) ?>" target="_blank" rel="noopener">
+                                <img src="<?= e(url('/' . $photo['image_path'])) ?>" alt="Vehicle photo" loading="lazy">
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     </article>
 </div>

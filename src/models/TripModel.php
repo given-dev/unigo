@@ -29,6 +29,8 @@ final class TripModel extends BaseModel
                             r.distance_km, r.origin_latitude, r.origin_longitude,
                             r.destination_latitude, r.destination_longitude,
                             v.registration_number, v.vehicle_type, v.make, v.model, v.capacity,
+                            (SELECT vi.image_path FROM vehicle_images vi WHERE vi.vehicle_id = v.id
+                             ORDER BY vi.sort_order ASC, vi.id ASC LIMIT 1) AS vehicle_image,
                             o.company_name,
                             d.rating_avg, du.first_name AS driver_first_name, du.last_name AS driver_last_name,
                             du.phone AS driver_phone';
@@ -48,6 +50,7 @@ final class TripModel extends BaseModel
             // Pickup / drop-off selection and the trip polyline both need the
             // route stops, so they travel with the trip.
             $trip['stops'] = (new RouteModel($this->db))->stops((int) $trip['route_id']);
+            $trip['images'] = (new VehicleModel())->images((int) $trip['vehicle_id']);
         }
 
         return $trip;
@@ -133,6 +136,8 @@ final class TripModel extends BaseModel
         return $this->db->select(
             'SELECT t.*, r.name AS route_name, r.origin_name, r.destination_name,
                     v.registration_number, v.vehicle_type, o.company_name,
+                    (SELECT vi.image_path FROM vehicle_images vi WHERE vi.vehicle_id = v.id
+                     ORDER BY vi.sort_order ASC, vi.id ASC LIMIT 1) AS vehicle_image,
                     b.id AS booking_id, b.reference, b.status AS booking_status, b.seat_number, b.fare AS booking_fare
              FROM bookings b
              INNER JOIN trips t ON t.id = b.trip_id

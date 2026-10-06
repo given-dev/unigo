@@ -224,6 +224,22 @@ CREATE TABLE `vehicles` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- 8b. vehicle_images (operator uploaded photos so passengers recognise the vehicle)
+-- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS `vehicle_images`;
+CREATE TABLE `vehicle_images` (
+  `id`          INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `vehicle_id`  INT UNSIGNED NOT NULL,
+  `image_path`  VARCHAR(255) NOT NULL,
+  `caption`     VARCHAR(120) NOT NULL DEFAULT '',
+  `sort_order`  SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  `created_at`  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `ix_vehicle_images_vehicle` (`vehicle_id`,`sort_order`,`id`),
+  CONSTRAINT `fk_vehicle_images_vehicle` FOREIGN KEY (`vehicle_id`) REFERENCES `vehicles`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- 9. routes
 -- ---------------------------------------------------------------------------
 DROP TABLE IF EXISTS `routes`;

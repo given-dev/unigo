@@ -206,6 +206,7 @@ final class RouteModel extends BaseModel
                    r.distance_km, r.duration_minutes, r.origin_latitude, r.origin_longitude,
                    r.destination_latitude, r.destination_longitude, r.colour,
                    v.id AS vehicle_id, v.registration_number, v.vehicle_type, v.make, v.model, v.capacity, v.colour AS vehicle_colour,
+                   (SELECT vi.image_path FROM vehicle_images vi WHERE vi.vehicle_id = v.id ORDER BY vi.sort_order ASC, vi.id ASC LIMIT 1) AS vehicle_image,
                    o.company_name, o.id AS operator_id,
                    d.id AS driver_id, d.rating_avg, d.rating_count,
                    du.first_name AS driver_first_name, du.last_name AS driver_last_name, du.phone AS driver_phone,

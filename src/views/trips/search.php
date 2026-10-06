@@ -73,6 +73,9 @@ $filters   = $filters ?? [];
                 $available = max(0, $total - $booked);
                 ?>
                 <article class="card card--hover">
+                    <?php if (!empty($trip['vehicle_image'])): ?>
+                        <img class="card__media" src="<?= e(url('/' . $trip['vehicle_image'])) ?>" alt="<?= e($trip['registration_number'] ?? 'Vehicle') ?> photo" loading="lazy">
+                    <?php endif; ?>
                     <div class="card__body">
                         <div class="flex items-center justify-between mb-2">
                             <span class="badge badge-primary"><?= e($trip['route_code'] ?? $trip['trip_code'] ?? '') ?></span>
