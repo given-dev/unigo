@@ -19,7 +19,7 @@ $mapConfig = $mapConfig ?? ['center' => [0.3476, 32.5825], 'zoom' => 12, 'marker
         <div>
             <h2 class="section__title">Live tracking</h2>
             <p class="text-sm text-muted-2 mb-0">
-                Follow your vehicle on the map. Positions are simulated demo data.
+                <?= is_demo_mode() ? 'Example vehicle positions.' : 'Locations appear when your driver shares a fresh GPS report. No marker means no recent location is available.' ?>
             </p>
         </div>
     </div>

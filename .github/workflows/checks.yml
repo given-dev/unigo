@@ -18,6 +18,7 @@ jobs:
           --health-timeout=5s
           --health-retries=15
     env:
+      UNIGO_DEMO_MODE: '1'
       UNIGO_DB_HOST: 127.0.0.1
       UNIGO_DB_USER: root
       UNIGO_DB_PASS: root
@@ -41,7 +42,9 @@ jobs:
           mysql -h 127.0.0.1 -u root < database/schema.sql
           php database/seed.php
       - name: Booking regression
-        run: php tests/booking.php
+        run: |
+          php tests/booking.php
+          php tests/live.php
       - name: Seat selection regression
         run: |
           npm install --prefix "$RUNNER_TEMP/unigo-tests" jsdom
@@ -64,3 +67,4 @@ jobs:
           python tests/http_smoke.py
           python tests/journey.py
           python tests/authentication.py
+          python tests/install_live.py

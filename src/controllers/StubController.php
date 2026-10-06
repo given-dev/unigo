@@ -58,7 +58,7 @@ final class StubController extends Controller
         '/admin/trips'        => ['Trips', 'All scheduled and live trips.', 'admin'],
         '/admin/bookings'     => ['Bookings', 'Every booking, its payment and status.', 'admin'],
         '/admin/deliveries'   => ['Deliveries', 'Parcel deliveries and tracking.', 'admin'],
-        '/admin/payments'     => ['Payments', 'The ledger of simulated transactions.', 'admin'],
+        '/admin/payments'     => ['Payments', 'Recorded payment receipts and refunds.', 'admin'],
         '/admin/emergencies'  => ['Emergencies', 'All emergency alerts across the platform.', 'admin'],
         '/admin/complaints'   => ['Complaints', 'Every complaint and its resolution.', 'admin'],
         '/admin/ratings'      => ['Ratings', 'Passenger ratings for drivers and vehicles.', 'admin'],

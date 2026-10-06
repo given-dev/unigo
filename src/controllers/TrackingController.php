@@ -42,7 +42,7 @@ final class TrackingController extends Controller
         $this->view('tracking/index', [
             'title'      => 'Track a trip - ' . app_name(),
             'pageTitle'  => 'Live tracking',
-            'pageSub'    => 'Vehicle positions are simulated in this demo',
+            'pageSub'    => is_demo_mode() ? 'Example vehicle positions' : 'Fresh location reports shared by your driver',
             'trips'      => $trips,
             'trip'       => $trip,
             'mapConfig'  => $map,
@@ -107,6 +107,8 @@ final class TrackingController extends Controller
         $vehicleId = (int) ($trip['vehicle_id'] ?? 0);
         $positions = $this->safe(static fn () => (new VehicleModel())->positionsForMap(200), []);
         foreach ($positions as $pos) {
+            if (!is_demo_mode() && ((bool) $pos['is_simulated'] || strtotime((string) $pos['recorded_at']) < time() - 300)) continue;
+            if (!is_demo_mode() && (int) ($pos['trip_id'] ?? 0) !== (int) $trip['id']) continue;
             if ($vehicleId > 0 && (int) $pos['id'] !== $vehicleId) {
                 continue;
             }

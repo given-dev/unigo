@@ -21,6 +21,19 @@ final class Config
 
     public static function load(string $file): void
     {
+        $envFile = dirname($file, 2) . '/.env';
+        if (is_file($envFile)) {
+            foreach (file($envFile, FILE_IGNORE_NEW_LINES) as $line) {
+                if (!preg_match('/^\s*(UNIGO_[A-Z0-9_]+)\s*=(.*)$/', $line, $match)) continue;
+                if (getenv($match[1]) !== false) continue;
+                $value = trim($match[2]);
+                if (strlen($value) >= 2 && (($value[0] === '"' && str_ends_with($value, '"')) || ($value[0] === "'" && str_ends_with($value, "'")))) {
+                    $decoded = $value[0] === '"' ? json_decode($value, true) : null;
+                    $value = is_string($decoded) ? $decoded : substr($value, 1, -1);
+                }
+                putenv($match[1] . '=' . $value);
+            }
+        }
         self::$items = require $file;
     }
 

@@ -21,8 +21,7 @@ declare(strict_types=1);
                 coordinates emergencies.
             </p>
             <p class="mb-0">
-                It is designed for Kampala first and structured to expand to any city. This build runs entirely on
-                simulated data so the full experience can be evaluated safely.
+                It is designed for Kampala first and structured to expand to any city. Companies manage their own schedules, bookings and fleet records.
             </p>
         </div>
     </div>

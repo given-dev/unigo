@@ -154,7 +154,7 @@ final class AuthController extends Controller
 
         // Password reset delivery is out of scope for the demonstration build.
         // We acknowledge the request without revealing whether the email exists.
-        Flash::info('Password reset emails are not configured in this demo. Please contact support to reset your password.');
+        Flash::info('Password reset emails are not configured. Please contact support to reset your password.');
         $this->redirect('/login');
     }
 
