@@ -65,7 +65,13 @@ final class Csrf
                 exit;
             }
             Flash::error('Your session expired. Please try again.');
-            Http::back();
+            Http::status(419);
+            View::render('errors/error', [
+                'title' => 'Refresh this page', 'code' => 419,
+                'heading' => 'Your form has expired',
+                'message' => 'Refresh the page to load a new form, then try again. Your changes have not been saved.',
+            ], 'layouts/public');
+            exit;
         }
     }
 }

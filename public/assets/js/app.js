@@ -22,6 +22,29 @@
         instances: {}
     };
 
+    // Revalidate restored pages and synchronize successful account changes
+    // between tabs. Never publish a session ID or remember-me credential.
+    window.addEventListener('pageshow', function (event) {
+        if (event.persisted) window.location.reload();
+    });
+    var sessionState = JSON.stringify([UniGo.config.userId || null, UniGo.config.csrf]);
+    try { window.localStorage.setItem('unigo-session-state', sessionState); } catch (e) {}
+    window.addEventListener('storage', function (event) {
+        if (event.key === 'unigo-session-state' && event.newValue && event.newValue !== sessionState) {
+            window.location.reload();
+        }
+    });
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible' || !UniGo.config.apiUrl) return;
+        window.fetch(UniGo.config.apiUrl.replace(/\/$/, '') + '/session', {
+            credentials: 'same-origin', headers: { 'Accept': 'application/json' }, cache: 'no-store'
+        }).then(function (response) { return response.json(); }).then(function (payload) {
+            if (payload.success && JSON.stringify([payload.data.user_id || null, payload.data.csrf]) !== sessionState) {
+                window.location.reload();
+            }
+        }).catch(function () {});
+    });
+
     /* ------------------------------------------------------------------
      * Utilities
      * ---------------------------------------------------------------- */
@@ -283,6 +306,12 @@
         }
 
         return window.fetch(url, opts).then(function (res) {
+            if (res.status === 401 && UniGo.config.userId) {
+                window.location.replace(UniGo.config.loginUrl);
+                var expired = new Error('Please sign in again.');
+                expired.status = 401;
+                throw expired;
+            }
             if (res.status === 419) {
                 UniGo.toast('Your session expired. Refreshing the page...', 'warning');
                 window.setTimeout(function () { window.location.reload(); }, 1500);

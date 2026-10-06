@@ -10,6 +10,7 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\ErrorHandler;
 use App\Core\Flash;
+use App\Core\Validator;
 use App\Models\UserModel;
 
 final class ProfileController extends Controller
@@ -42,16 +43,28 @@ final class ProfileController extends Controller
             'phone'         => trim($this->request->str('phone')),
             'national_id'   => trim($this->request->str('national_id')),
             'date_of_birth' => $this->request->str('date_of_birth') ?: null,
-            'gender'        => $this->request->str('gender') ?: null,
+            'gender'        => $this->request->str('gender') ?: 'undisclosed',
         ];
 
-        if ($data['first_name'] === '' || $data['last_name'] === '') {
-            Flash::error('First and last name are required.');
+        $validator = Validator::make($data);
+        if (!$validator->validate([
+            'first_name' => 'required|min:2|max:60',
+            'last_name' => 'required|min:2|max:60',
+            'phone' => 'required|phone',
+            'national_id' => 'max:40',
+        ]) || !in_array($data['gender'], ['male', 'female', 'other', 'undisclosed'], true)) {
+            Flash::error($validator->firstError() ?? 'Choose a valid gender.');
+            $this->redirect('/profile');
+        }
+        $dob = $data['date_of_birth'];
+        $date = $dob ? \DateTimeImmutable::createFromFormat('!Y-m-d', $dob) : null;
+        if ($dob && (!$date || $date->format('Y-m-d') !== $dob || $dob > date('Y-m-d'))) {
+            Flash::error('Enter a valid date of birth that is not in the future.');
             $this->redirect('/profile');
         }
 
         try {
-            (new UserModel())->updateProfile((int) Auth::id(), array_filter($data, static fn ($v) => $v !== null));
+            (new UserModel())->updateProfile((int) Auth::id(), $data);
             Flash::success('Profile updated.');
         } catch (\Throwable $e) {
             ErrorHandler::log('error', 'Profile update failed: ' . $e->getMessage());
@@ -67,9 +80,14 @@ final class ProfileController extends Controller
         $this->requireLogin();
         $this->verifyCsrf();
 
-        $current = $this->request->str('current_password');
-        $new     = $this->request->str('new_password');
-        $confirm = $this->request->str('new_password_confirmation');
+        $current = (string) $this->request->input('current_password', '');
+        $new     = (string) $this->request->input('new_password', '');
+        $confirm = (string) $this->request->input('new_password_confirmation', '');
+
+        if (!Validator::isStrongPassword($new)) {
+            Flash::error(Validator::passwordHint());
+            $this->redirect('/profile');
+        }
 
         if ($new !== $confirm) {
             Flash::error('The new passwords do not match.');

@@ -7,7 +7,7 @@ declare(strict_types=1);
 use App\Core\Csrf;
 ?>
 <h1 class="auth__title">Reset your password</h1>
-<p class="auth__sub">Enter the email on your account and we will send a reset link.</p>
+<p class="auth__sub">Email recovery is not configured yet. Contact support for help recovering your account.</p>
 
 <form method="post" action="<?= e(url('/forgot-password')) ?>" novalidate>
     <?= Csrf::field() ?>
@@ -20,7 +20,7 @@ use App\Core\Csrf;
         </div>
     </div>
     <button class="btn btn--primary btn--block" type="submit">
-        <i class="icon" data-icon="send">send</i> Send reset link
+        <i class="icon" data-icon="send">send</i> Check recovery options
     </button>
 </form>
 

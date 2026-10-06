@@ -62,3 +62,4 @@ jobs:
           PY
           python tests/http_smoke.py
           python tests/journey.py
+          python tests/authentication.py
