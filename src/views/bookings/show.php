@@ -21,6 +21,9 @@ $driverName = trim((string) ($booking['driver_first_name'] ?? '') . ' ' . (strin
     </a>
 </div>
 
+<?php if (!is_demo_mode() && $status === 'cancelled' && ($booking['payment_status'] ?? '') === 'paid'): ?>
+<div class="alert alert-warning mb-3" role="status">Your payment is still recorded as collected. Contact the travel company to arrange its return. The refund receipt appears after staff confirms returning the cash.</div>
+<?php endif; ?>
 <div class="grid grid-2 gap-3">
     <article class="card">
         <div class="card__body">

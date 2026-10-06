@@ -126,7 +126,7 @@ $title = $titles[$role] ?? ['Dashboard', ''];
             <h2 class="card__title">Signed in as <?= e(Auth::name()) ?></h2>
             <p class="text-sm text-muted-2 mb-0">
                 Roles: <?= e(implode(', ', array_map(static fn ($r): string => ucfirst((string) $r), Auth::roles()))) ?>.
-                This is a simulated data environment; statistics above are demo values.
+                <?php if (is_demo_mode()): ?>Example statistics for testing.<?php else: ?>Figures come from your recorded trips, bookings and collected payments.<?php endif; ?>
             </p>
         </div>
     </div>

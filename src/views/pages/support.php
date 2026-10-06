@@ -31,7 +31,7 @@ use App\Core\Config;
                     In an emergency, use the SOS button in the app or call the hotline
                     <strong><?= e((string) Config::get('domain.emergency_hotline', '911')) ?></strong>.
                 </p>
-                <p class="text-xs text-muted-2 mb-0">In this demonstration build, alerts are simulated.</p>
+                <p class="text-xs text-muted-2 mb-0">Alerts are sent to the system workspace. For urgent help, contact emergency services directly.</p>
             </div>
         </article>
     </div>
@@ -48,8 +48,8 @@ use App\Core\Config;
         ['How do I track my vehicle?', 'Open the tracking page from your dashboard. Your driver\'s live position and the estimated arrival time update on the map.'],
         ['Can I send a parcel?', 'Yes. Use the delivery flow from your dashboard, describe the item and its destination, and you will get a tracking number.'],
         ['What if I need to cancel?', 'Open the booking from My bookings and cancel. Seats are released back to other passengers instantly.'],
-        ['Is my payment real?', 'No. This is a demonstration environment: all payments are simulated and no money moves.'],
-        ['How do I reset my password?', 'Use the "Forgot password" link on the sign-in page. In this demo, contact support to reset it.'],
+        ['Is my payment real?', is_demo_mode() ? 'Example payments do not move money.' : 'Pay your travel company in cash. A receipt appears after staff records collection; digital checkout is not connected.'],
+        ['How do I reset my password?', 'Use the "Forgot password" link on the sign-in page. Contact support for recovery assistance.'],
     ];
     ?>
     <div class="grid gap-2">

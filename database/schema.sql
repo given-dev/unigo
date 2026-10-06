@@ -845,11 +845,11 @@ INSERT INTO `roles` (`name`,`slug`,`description`,`home_route`) VALUES
 -- ---------------------------------------------------------------------------
 INSERT INTO `system_settings` (`setting_key`,`setting_value`,`setting_type`,`group_name`,`label`,`description`,`is_public`) VALUES
 ('site_name','UniGo','string','general','Application name','Name shown in the header and browser title',1),
-('support_phone','+256 700 000 000','string','support','Support phone','Shown on the help screen',1),
-('support_email','support@unigo.test','string','support','Support email','Shown on the help screen',1),
-('emergency_hotline','911','string','support','Emergency hotline','Police / ambulance number used on the SOS screen',1),
+('support_phone','','string','support','Support phone','Shown on the help screen',1),
+('support_email','','string','support','Support email','Shown on the help screen',1),
+('emergency_hotline','','string','support','Emergency hotline','Police / ambulance number used on the SOS screen',1),
 ('cancellation_window_minutes','30','number','booking','Cancellation window','Minutes before departure after which a booking can no longer be cancelled online',0),
-('demo_mode','1','boolean','general','Simulated data mode','When ON, the UI labels simulated GPS and predictions as DEMO',1),
+('demo_mode','0','boolean','general','Simulated data mode','When ON, the UI labels simulated GPS and predictions as DEMO',1),
 ('booking_reference_prefix','UG','string','booking','Booking reference prefix','',0),
 ('delivery_reference_prefix','UNI-GO','string','delivery','Parcel tracking prefix','',0),
 ('max_advance_booking_days','30','number','booking','Advance booking horizon','How far ahead passengers may book',0),

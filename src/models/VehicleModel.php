@@ -46,9 +46,10 @@ final class VehicleModel extends BaseModel
     public function positionsForMap(?int $limit = 200): array
     {
         $limit = max(1, min(500, $limit ?? 200));
+        $liveFilter = \App\Core\Config::get('domain.demo_mode', false) ? '' : " AND vl.is_simulated=0 AND vl.recorded_at >= DATE_SUB(NOW(),INTERVAL 5 MINUTE)";
         return $this->db->select(
             "SELECT v.id, v.registration_number, v.vehicle_type, v.status,
-                    vl.latitude, vl.longitude, vl.speed, vl.heading, vl.recorded_at, vl.is_simulated,
+                    vl.latitude, vl.longitude, vl.speed, vl.heading, vl.recorded_at, vl.is_simulated, vl.trip_id,
                     o.company_name
              FROM vehicles v
              LEFT JOIN operators o ON o.id = v.operator_id
@@ -56,7 +57,7 @@ final class VehicleModel extends BaseModel
                  SELECT id FROM vehicle_locations WHERE vehicle_id = v.id ORDER BY recorded_at DESC, id DESC LIMIT 1
              )
              WHERE v.status IN ('active','on_trip')
-               AND vl.latitude IS NOT NULL
+               AND vl.latitude IS NOT NULL $liveFilter
              ORDER BY vl.recorded_at DESC
              LIMIT $limit"
         );

@@ -99,7 +99,6 @@ final class SettingsService
             'support_email'     => 'domain.support_email',
             'emergency_hotline' => 'domain.emergency_hotline',
             'cancellation_window_minutes' => 'domain.cancellation_window_min',
-            'demo_mode'         => 'domain.demo_mode',
         ];
         foreach ($map as $settingKey => $configKey) {
             if (isset(self::$cache[$settingKey]) && self::$cache[$settingKey] !== '') {

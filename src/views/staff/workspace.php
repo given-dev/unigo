@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <?php if ($resource === 'settings'): ?>
 <form class="card mb-4" method="post" action="<?= e(url($path)) ?>"><div class="card__body"><?= Csrf::field() ?>
 <?php if ($role === 'admin'): ?>
-<label class="label" for="setting-key">Setting</label><select class="select mb-3" name="setting_key" id="setting-key"><?php foreach (['demo_mode','support_phone','support_email','cancellation_window_minutes'] as $key): ?><option value="<?= e($key) ?>"><?= e(ucwords(str_replace('_',' ',$key))) ?></option><?php endforeach; ?></select>
+<label class="label" for="setting-key">Setting</label><select class="select mb-3" name="setting_key" id="setting-key"><?php foreach (['support_phone','support_email','emergency_hotline','cancellation_window_minutes'] as $key): ?><option value="<?= e($key) ?>"><?= e(ucwords(str_replace('_',' ',$key))) ?></option><?php endforeach; ?></select>
 <label class="label" for="setting-value">Value</label><input class="input" id="setting-value" name="setting_value" required>
 <?php else: foreach (['company_name','contact_email','contact_phone','address'] as $field): ?><label class="label" for="setting-<?= e($field) ?>"><?= e(ucwords(str_replace('_',' ',$field))) ?></label><input class="input mb-3" name="<?= e($field) ?>" id="setting-<?= e($field) ?>" value="<?= e($rows[0][$field] ?? '') ?>" <?= $field !== 'address' ? 'required' : '' ?>><?php endforeach; endif; ?>
 <button class="btn btn--primary mt-3" type="submit">Save settings</button></div></form>
@@ -93,6 +93,9 @@ document.addEventListener('DOMContentLoaded',function(){
 <?php foreach ($rows as $row): ?>
 <tr><?php foreach ($columns as $column): ?><td><?= e($row[$column] ?? '—') ?></td><?php endforeach; ?><td>
 <?php if ($resource === 'trips'): ?><a class="btn btn--ghost btn--sm" href="<?= e(url($path . '?trip=' . (int)$row['id'])) ?>">Passenger list</a><?php endif; ?>
+<?php if ($resource === 'bookings' && in_array($role,['admin','operator','driver'],true) && (($row['payment_status'] === 'unpaid' && in_array($row['status'],['confirmed','completed'],true)) || ($row['payment_status'] === 'paid' && $row['status'] === 'cancelled'))): $refundCash=$row['status']==='cancelled'; ?>
+<form method="post" action="<?= e(url($path)) ?>" data-confirm="<?= $refundCash ? 'Confirm you have returned the cash to the passenger.' : 'Confirm you have received the full fare in cash.' ?>"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><input type="hidden" name="action" value="<?= $refundCash ? 'refund_cash' : 'collect_cash' ?>"><button class="btn btn--secondary btn--sm" type="submit"><?= $refundCash ? 'Record cash refund' : 'Record cash received' ?></button></form>
+<?php endif; ?>
 <?php $options=$transitions[$resource][$row['status'] ?? ''] ?? $statuses;
 $editable=in_array($role,['admin','operator'],true) || ($role === 'authority' && in_array($resource,['operators','complaints','emergencies'],true)) || ($role === 'driver' && in_array($resource,['trips','deliveries'],true)); ?>
 <?php if ($editable && $options && $resource !== 'settings'): ?>

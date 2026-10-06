@@ -48,6 +48,7 @@ final class PredictionService
      */
     public static function runAll(): array
     {
+        if (!\App\Core\Config::get('domain.demo_mode', false)) return [];
         $results = array_merge(
             self::demandForecast(),
             self::congestionForecast(),

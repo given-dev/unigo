@@ -26,6 +26,9 @@ final class PaymentService
     public static function gateway(): PaymentGatewayInterface
     {
         if (self::$gateway === null) {
+            if (!Config::get('domain.demo_mode', false)) {
+                throw new \App\Core\ValidationException('Online payments are not connected. Choose cash payment.');
+            }
             // To go live, swap this for a real adapter, e.g.
             //   self::$gateway = new MtnMobileMoneyGateway(MtnConfig::fromConfig());
             // No controller or model changes would be required.
@@ -42,6 +45,9 @@ final class PaymentService
     /** Methods offered on the checkout screen. */
     public static function methods(): array
     {
+        if (!Config::get('domain.demo_mode', false)) {
+            return [['value' => 'cash', 'label' => 'Cash', 'hint' => 'Pay the company cashier or driver; a receipt is issued after collection.', 'icon' => 'cash']];
+        }
         return [
             ['value' => 'mobile_money', 'label' => 'Mobile Money', 'hint' => 'MTN MoMo / Airtel Money (simulated)', 'icon' => 'phone'],
             ['value' => 'card',         'label' => 'Card',         'hint' => 'Tokenised card (simulated)', 'icon' => 'card'],
@@ -52,7 +58,7 @@ final class PaymentService
 
     public static function isMock(): bool
     {
-        return self::gateway() instanceof MockPaymentGateway;
+        return Config::get('domain.demo_mode', false) && self::gateway() instanceof MockPaymentGateway;
     }
 
     /**
@@ -63,6 +69,9 @@ final class PaymentService
      */
     public static function charge(int $userId, float $amount, string $method, array $context = [], ?int $actorId = null): array
     {
+        if (!Config::get('domain.demo_mode', false)) {
+            throw new \App\Core\ValidationException('Online payments are not connected. Choose cash payment.');
+        }
         $db = Database::instance();
         $model = new PaymentModel();
         $reference = ReferenceGenerator::generate('payment');
@@ -150,11 +159,16 @@ final class PaymentService
 
         $count = 0;
         foreach ($payments as $payment) {
-            self::gateway()->refund([
+            if ($payment['method'] === 'cash') continue; // Cash is returned and recorded by authorized staff.
+            if (!Config::get('domain.demo_mode', false)) {
+                throw new \App\Core\ConflictException('This payment requires a connected provider to process a refund.');
+            }
+            $result = self::gateway()->refund([
                 'provider_reference' => (string) $payment['provider_reference'],
                 'amount'             => (float) $payment['amount'],
                 'currency'           => (string) $payment['currency'],
             ]);
+            if (($result['status'] ?? '') !== 'refunded') throw new \App\Core\ConflictException('The refund has not been confirmed.');
             $model->updateById((int) $payment['id'], [
                 'status'          => 'refunded',
                 'refunded_amount' => (float) $payment['amount'],

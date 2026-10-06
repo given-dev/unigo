@@ -164,10 +164,7 @@ $perRow = max(1, $perRow);
                             <div class="field">
                                 <label class="label" for="payment_method">Payment</label>
                                 <select class="select" id="payment_method" name="payment_method">
-                                    <option value="mobile_money">Mobile money (simulated)</option>
-                                    <option value="card">Card (simulated)</option>
-                                    <option value="wallet">UniGo wallet</option>
-                                    <option value="cash">Pay the driver (cash)</option>
+                                    <?php foreach (\App\Services\PaymentService::methods() as $method): ?><option value="<?= e($method['value']) ?>"><?= e($method['label'] . ' — ' . $method['hint']) ?></option><?php endforeach; ?>
                                 </select>
                             </div>
                             <div class="field">

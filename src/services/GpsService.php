@@ -36,6 +36,7 @@ final class GpsService
      */
     public static function record(int $vehicleId, float $lat, float $lon, float $speed = 0, float $heading = 0, string $source = 'gps_device', ?int $tripId = null, float $accuracy = 10): array
     {
+        if ($source === 'simulator' && !Config::get('domain.demo_mode', false)) throw new ValidationException('GPS simulation is disabled.');
         if (!\App\Core\Validator::isLatitude((string) $lat) || !\App\Core\Validator::isLongitude((string) $lon)) {
             throw new ValidationException('The coordinates received were not valid.');
         }
@@ -91,6 +92,7 @@ final class GpsService
     public static function latestPositions(?array $vehicleIds = null, int $limit = 200): array
     {
         $limit = max(1, min(500, $limit));
+        $liveFilter = Config::get('domain.demo_mode', false) ? '' : " AND vl.is_simulated=0 AND vl.recorded_at >= DATE_SUB(NOW(),INTERVAL 5 MINUTE)";
         $sql = "SELECT v.id AS vehicle_id, v.registration_number, v.vehicle_type, v.status,
                        vl.latitude, vl.longitude, vl.speed, vl.heading, vl.recorded_at,
                        vl.source, vl.is_simulated, vl.trip_id,
@@ -101,7 +103,7 @@ final class GpsService
                     ORDER BY recorded_at DESC, id DESC LIMIT 1
                 )
                 LEFT JOIN operators o ON o.id = v.operator_id
-                WHERE v.status IN ('active','on_trip') AND vl.id IS NOT NULL";
+                WHERE v.status IN ('active','on_trip') AND vl.id IS NOT NULL $liveFilter";
         $params = [];
 
         if ($vehicleIds) {
@@ -157,6 +159,7 @@ final class GpsService
      */
     public static function simulateStep(?int $tripId = null): array
     {
+        if (!Config::get('domain.demo_mode', false)) throw new \App\Core\ValidationException('GPS simulation is disabled.');
         $db = Database::instance();
         $trips = $tripId
             ? $db->select("SELECT * FROM trips WHERE id = ? AND status = 'in_transit'", [$tripId])

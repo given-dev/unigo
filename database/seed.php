@@ -30,6 +30,9 @@ if (PHP_SAPI !== 'cli') {
 
 define('BASE_PATH', dirname(__DIR__));
 require BASE_PATH . '/src/bootstrap.php';
+if (!\App\Core\Config::get('domain.demo_mode', false)) {
+    exit("Demo seeding is disabled. Use scripts/install-live.php for a real installation.\n");
+}
 
 use App\Core\Auth;
 use App\Core\Database;

@@ -87,13 +87,13 @@ return [
     'domain' => [
         // Demo data flag: when true the UI renders a persistent "SIMULATED DATA"
         // ribbon so simulated GPS / predictions are never mistaken for real feeds.
-        'demo_mode'              => true,
+        'demo_mode'              => getenv('UNIGO_DEMO_MODE') === '1' && getenv('UNIGO_ENV') !== 'production',
         'max_results_per_page'   => 20,
         'max_page_size'          => 100,
         'cancellation_window_min'=> 30,   // minutes before departure
-        'support_phone'          => '+256 700 000 000',
-        'support_email'          => 'support@unigo.test',
-        'emergency_hotline'      => '911',
+        'support_phone'          => '',
+        'support_email'          => '',
+        'emergency_hotline'      => '',
         // Base fare + per km used when a trip has no explicit fare.
         'fare_base'              => 2000,
         'fare_per_km'            => 900,
