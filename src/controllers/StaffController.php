@@ -190,7 +190,8 @@ final class StaffController extends Controller
                     $this->enum($status,['active','inactive','suspended']);
                     $db->update('routes',['status'=>$status],'id = ?',[$id]);
                 } elseif ($resource === 'ratings' && $role === 'admin') {
-                    $db->update('ratings',['is_published'=>$status === 'published' ? 1 : 0],'id = ?',[$id]);
+                    $this->enum($status, ['published', 'hidden']);
+                    (new \App\Models\RatingModel())->setPublished($id, $status === 'published');
                 } else throw new AuthorizationException('This action is not permitted.');
                 ActivityLog::record('staff.updated',$id,$resource,'Updated ' . $resource . ' status to ' . $status);
             });
@@ -244,7 +245,8 @@ final class StaffController extends Controller
         } elseif (in_array($resource,['users','drivers','operators'],true)) {
             if ($resource === 'users' && $role !== 'admin') throw new AuthorizationException('Only admins create users.');
             $email=$this->required('email',150); $password=$this->required('password',100);
-            if (!filter_var($email,FILTER_VALIDATE_EMAIL) || strlen($password) < 8) throw new ValidationException('Enter a valid email and a password with at least 8 characters.');
+            if (!filter_var($email,FILTER_VALIDATE_EMAIL)) throw new ValidationException('Enter a valid email.');
+            if (!\App\Core\Validator::isStrongPassword($password)) throw new ValidationException(\App\Core\Validator::passwordHint());
             $accountRole=$resource === 'users' ? $this->request->str('role','passenger') : ($resource === 'drivers' ? 'driver' : 'operator');
             $this->enum($accountRole,['passenger','driver','operator','authority','admin']);
             if ($resource === 'users' && !in_array($accountRole,['passenger','authority','admin'],true)) throw new ValidationException('Create driver and operator accounts in their respective workspaces.');

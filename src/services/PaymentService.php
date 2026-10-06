@@ -45,7 +45,7 @@ final class PaymentService
         return [
             ['value' => 'mobile_money', 'label' => 'Mobile Money', 'hint' => 'MTN MoMo / Airtel Money (simulated)', 'icon' => 'phone'],
             ['value' => 'card',         'label' => 'Card',         'hint' => 'Tokenised card (simulated)', 'icon' => 'card'],
-            ['value' => 'wallet',       'label' => 'UniGo Wallet', 'hint' => 'Pay from your UniGo balance', 'icon' => 'wallet'],
+            ['value' => 'wallet',       'label' => 'UniGo Wallet', 'hint' => 'Simulated wallet payment (no stored balance)', 'icon' => 'wallet'],
             ['value' => 'cash',         'label' => 'Cash',         'hint' => 'Pay the driver or cashier on board', 'icon' => 'cash'],
         ];
     }
@@ -141,20 +141,28 @@ final class PaymentService
     /** Refund every successful payment attached to a booking. */
     public static function refundForBooking(int $bookingId, ?int $actorId = null): int
     {
+        return Database::instance()->transaction(fn () => self::refundPayments($bookingId, $actorId));
+    }
+
+    private static function refundPayments(int $bookingId, ?int $actorId): int
+    {
         $db = Database::instance();
         $model = new PaymentModel();
         $payments = $db->select(
-            "SELECT * FROM payments WHERE booking_id = ? AND status = 'successful'",
+            "SELECT * FROM payments WHERE booking_id = ? AND status = 'successful' FOR UPDATE",
             [$bookingId]
         );
 
         $count = 0;
         foreach ($payments as $payment) {
-            self::gateway()->refund([
+            $result = self::gateway()->refund([
                 'provider_reference' => (string) $payment['provider_reference'],
                 'amount'             => (float) $payment['amount'],
                 'currency'           => (string) $payment['currency'],
             ]);
+            if (($result['status'] ?? '') !== 'refunded') {
+                throw new \App\Core\ConflictException('The refund could not be completed. Please contact support.');
+            }
             $model->updateById((int) $payment['id'], [
                 'status'          => 'refunded',
                 'refunded_amount' => (float) $payment['amount'],

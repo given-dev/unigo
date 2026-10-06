@@ -1,5 +1,5 @@
 """Writes a demo journey. Run ONLY against a disposable seeded database."""
-import re,time,datetime,sys,urllib.request,urllib.error,urllib.parse,http.cookiejar,json,html
+import re,time,datetime,sys,urllib.request,urllib.error,urllib.parse,http.cookiejar,json,html,subprocess,os
 BASE=sys.argv[1] if len(sys.argv)>1 else 'http://127.0.0.1:8000'
 KEY=str(int(time.time()))
 checks=0
@@ -13,13 +13,17 @@ def check(condition,message):
  if not condition:raise AssertionError(message)
  checks+=1
 def login(email,password='UniGo@2026'):
- op=client();_,page=req(op,'/login');_,page=req(op,'/login',{'_token':token(page),'email':email,'password':password});check('Welcome back' in page,'Login '+email);return op
+ op=client();_,page=req(op,'/login');_,page=req(op,'/login',{'_token':token(page),'email':email,'password':password});_,session=req(op,'/api/session');check(json.loads(session)['data']['user_id'] is not None,'Login '+email);return op
 def save(op,path,data):
  _,page=req(op,path);_,page=req(op,path,dict(data,_token=token(page)));check('Changes saved.' in page,'Saving '+path+' failed: '+re.sub('<[^>]+>',' ',page)[-1200:]);return page
 def rowid(page,marker):
  for row in re.findall(r'<tr>(.*?)</tr>',page,re.S):
   if marker in row:return int(re.search(r'<td>(\d+)</td>',row).group(1))
  raise AssertionError('No row for '+marker)
+def sql(query,params=()):
+ code="require 'src/bootstrap.php';echo json_encode(App\\Core\\Database::instance()->select($argv[1],json_decode($argv[2],true)));"
+ result=subprocess.run([os.environ.get('UNIGO_TEST_PHP','php'),'-r',code,query,json.dumps(params)],check=True,capture_output=True,text=True)
+ return json.loads(result.stdout)
 admin=login('admin@unigo.test')
 company='Test Operator '+KEY
 page=save(admin,'/admin/operators',{'action':'create','first_name':'Test','last_name':'Operator','email':'op'+KEY+'@example.test','phone':'+256780123456','password':'Journey@2026','company_name':company,'license_number':'OP'+KEY})
@@ -66,6 +70,14 @@ check(json.loads(data)['success'],'Driver GPS sharing')
 _,data=req(passenger,'/api/tracking/'+str(tid));check(len(json.loads(data)['data']['vehicles'])==1,'Passenger GPS feed')
 save(driver,'/driver/trips',{'id':tid,'status':'in_transit'})
 save(driver,'/driver/trips',{'id':tid,'status':'completed'})
+_,page=req(driver,'/trips/'+str(tid))
+check('/trips/'+str(tid)+'/book' not in page,'Completed trips must not display a booking form')
 _,page=req(passenger,'/ratings');_,page=req(passenger,'/ratings',{'_token':token(page),'trip_id':tid,'rating':5,'comment':'Journey regression'})
 check('Thank you for rating' in page,'Passenger review after completion')
+_,page=req(admin,'/admin/ratings?search=Journey+regression')
+rating_id=int(sql('SELECT id FROM ratings WHERE trip_id=?',[tid])[0]['id'])
+save(admin,'/admin/ratings',{'id':rating_id,'status':'hidden'})
+check(sql('SELECT rating_count FROM drivers WHERE id=?',[did])[0]['rating_count']==0,'Hiding a review removes it from the driver aggregate')
+save(admin,'/admin/ratings',{'id':rating_id,'status':'published'})
+check(sql('SELECT rating_count,rating_avg FROM drivers WHERE id=?',[did])[0]['rating_count']==1,'Publishing a review restores the driver aggregate')
 print('Full journey checks passed:',checks)

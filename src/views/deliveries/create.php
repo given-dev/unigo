@@ -29,7 +29,7 @@ $old = \App\Core\Flash::oldAll();
                     </div>
                     <div class="field">
                         <label class="label" for="recipient_phone">Phone <span class="req">*</span></label>
-                        <input class="input" id="recipient_phone" name="recipient_phone" required maxlength="30"
+                        <input class="input" id="recipient_phone" name="recipient_phone" required maxlength="25"
                                value="<?= e($old['recipient_phone'] ?? '') ?>">
                     </div>
                 </div>

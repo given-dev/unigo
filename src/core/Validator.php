@@ -36,6 +36,10 @@ final class Validator
         foreach ($rules as $field => $ruleString) {
             $label = $labels[$field] ?? ucfirst(str_replace('_', ' ', $field));
             $value = $this->data[$field] ?? null;
+            if ($value !== null && !is_scalar($value)) {
+                $this->addError($field, "$label must be a single value.");
+                continue;
+            }
             $this->runField($field, $label, (string) $value, explode('|', $ruleString));
         }
         return $this->errors === [];
@@ -45,7 +49,7 @@ final class Validator
     {
         foreach ($rules as $rule) {
             [$name, $arg] = array_pad(explode(':', $rule, 2), 2, null);
-            $isEmpty = $value === '';
+            $isEmpty = trim($value) === '';
 
             if ($name === 'required' && $isEmpty) {
                 $this->addError($field, "$label is required.");

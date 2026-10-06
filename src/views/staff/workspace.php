@@ -94,6 +94,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <tr><?php foreach ($columns as $column): ?><td><?= e($row[$column] ?? '—') ?></td><?php endforeach; ?><td>
 <?php if ($resource === 'trips'): ?><a class="btn btn--ghost btn--sm" href="<?= e(url($path . '?trip=' . (int)$row['id'])) ?>">Passenger list</a><?php endif; ?>
 <?php $options=$transitions[$resource][$row['status'] ?? ''] ?? $statuses;
+if ($resource === 'deliveries' && ($row['status'] ?? '') === 'created') $options = ['cancelled'];
 $editable=in_array($role,['admin','operator'],true) || ($role === 'authority' && in_array($resource,['operators','complaints','emergencies'],true)) || ($role === 'driver' && in_array($resource,['trips','deliveries'],true)); ?>
 <?php if ($editable && $options && $resource !== 'settings'): ?>
 <form method="post" action="<?= e(url($path)) ?>" class="flex gap-2"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><select class="select" name="status" aria-label="Status"><?php foreach ($options as $option): ?><option value="<?= e($option) ?>"><?= e(ucwords(str_replace('_',' ',$option))) ?></option><?php endforeach; ?></select><input class="input" name="note" maxlength="500" placeholder="Resolution or note" aria-label="Resolution or note"><button class="btn btn--secondary btn--sm" type="submit">Update</button></form>

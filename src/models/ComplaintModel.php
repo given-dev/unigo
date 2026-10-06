@@ -27,6 +27,11 @@ final class ComplaintModel extends BaseModel
 
     public function openComplaint(array $data, int $userId): array
     {
+        $description = trim((string) ($data['description'] ?? ''));
+        if ($description === '' || mb_strlen($description) > 1000) {
+            throw new ValidationException('Describe the problem using at most 1000 characters.');
+        }
+        $data['description'] = $description;
         $category = (string) ($data['category'] ?? 'other');
         if (!in_array($category, self::CATEGORIES, true)) {
             throw new ValidationException('Please choose a valid complaint category.');

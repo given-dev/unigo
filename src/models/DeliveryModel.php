@@ -14,6 +14,7 @@ use App\Core\Database;
 use App\Core\NotFoundException;
 use App\Core\Paginator;
 use App\Core\ValidationException;
+use App\Core\Validator;
 use App\Services\NotificationService;
 use App\Services\ReferenceGenerator;
 
@@ -72,8 +73,18 @@ final class DeliveryModel extends BaseModel
     /** Create a delivery request plus its first tracking event. */
     public function createDelivery(array $data, int $customerId): array
     {
+        $data += ['weight_kg' => 1, 'declared_value' => 0];
+        Validator::make($data)->assert([
+            'recipient_name' => 'required|max:120', 'recipient_phone' => 'required|phone|max:25',
+            'pickup_address' => 'required|max:200', 'dropoff_address' => 'required|max:200',
+            'parcel_description' => 'required|max:255',
+            'weight_kg' => 'required|numeric|min_value:0.1|max_value:999999.99',
+            'declared_value' => 'required|numeric|min_value:0|max_value:9999999999.99',
+            'pickup_latitude' => 'nullable|latitude', 'pickup_longitude' => 'nullable|longitude',
+            'dropoff_latitude' => 'nullable|latitude', 'dropoff_longitude' => 'nullable|longitude',
+        ]);
         return $this->db->transaction(function () use ($data, $customerId): array {
-            $weight = max(0.1, (float) ($data['weight_kg'] ?? 1));
+            $weight = (float) $data['weight_kg'];
 
             // Demo rate card. A production system would resolve this from a
             // distance matrix and a versioned tariff table.
@@ -88,11 +99,11 @@ final class DeliveryModel extends BaseModel
                 'recipient_name'     => $data['recipient_name'],
                 'recipient_phone'    => $data['recipient_phone'],
                 'pickup_address'     => $data['pickup_address'],
-                'pickup_latitude'    => $data['pickup_latitude'] ?: null,
-                'pickup_longitude'   => $data['pickup_longitude'] ?: null,
+                'pickup_latitude'    => $data['pickup_latitude'] ?? null,
+                'pickup_longitude'   => $data['pickup_longitude'] ?? null,
                 'dropoff_address'    => $data['dropoff_address'],
-                'dropoff_latitude'   => $data['dropoff_latitude'] ?: null,
-                'dropoff_longitude'  => $data['dropoff_longitude'] ?: null,
+                'dropoff_latitude'   => $data['dropoff_latitude'] ?? null,
+                'dropoff_longitude'  => $data['dropoff_longitude'] ?? null,
                 'parcel_description' => $data['parcel_description'],
                 'weight_kg'          => $weight,
                 'is_fragile'         => (int) ($data['is_fragile'] ?? 0),
@@ -125,6 +136,12 @@ final class DeliveryModel extends BaseModel
     /** Validated status transition with tracking + notification. */
     public function updateStatus(int $deliveryId, string $status, array $data = [], ?int $actorId = null): array
     {
+        return $this->db->transaction(fn () => $this->transitionStatus($deliveryId, $status, $data, $actorId));
+    }
+
+    private function transitionStatus(int $deliveryId, string $status, array $data, ?int $actorId): array
+    {
+        $this->db->first('SELECT id FROM deliveries WHERE id = ? FOR UPDATE', [$deliveryId]);
         $delivery = $this->findDetailed($deliveryId);
         if (!$delivery) {
             throw new NotFoundException('Parcel not found.');
@@ -137,6 +154,9 @@ final class DeliveryModel extends BaseModel
                 'A parcel that is ' . str_replace('_', ' ', (string) $delivery['status'])
                 . ' cannot be marked as ' . str_replace('_', ' ', $status) . '.'
             );
+        }
+        if ($status === 'assigned' && !$delivery['vehicle_id']) {
+            throw new ValidationException('Assign a vehicle before marking this parcel as assigned.');
         }
 
         $update = ['status' => $status];
@@ -175,14 +195,19 @@ final class DeliveryModel extends BaseModel
 
     public function assign(int $deliveryId, int $vehicleId, ?int $tripId, ?int $operatorId, ?int $actorId): array
     {
-        $this->updateById($deliveryId, [
-            'vehicle_id'  => $vehicleId,
-            'trip_id'     => $tripId,
-            'operator_id' => $operatorId,
-        ]);
-        return $this->updateStatus($deliveryId, 'assigned', [
-            'description' => 'Assigned to a vehicle and scheduled on a trip.',
-        ], $actorId);
+        return $this->db->transaction(function () use ($deliveryId, $vehicleId, $tripId, $operatorId, $actorId): array {
+            $delivery = $this->db->first('SELECT status FROM deliveries WHERE id = ? FOR UPDATE', [$deliveryId]);
+            if (!$delivery) throw new NotFoundException('Parcel not found.');
+            if ($delivery['status'] !== 'created') throw new ConflictException('Only a new parcel can be assigned.');
+            $vehicle = $this->db->first('SELECT operator_id, status FROM vehicles WHERE id = ?', [$vehicleId]);
+            if (!$vehicle || !in_array($vehicle['status'], ['active', 'on_trip'], true)) throw new ValidationException('Choose an active vehicle.');
+            if (($vehicle['operator_id'] === null ? null : (int) $vehicle['operator_id']) !== $operatorId) throw new ValidationException('The vehicle must belong to the selected operator.');
+            if ($tripId && !$this->db->exists("SELECT 1 FROM trips WHERE id = ? AND vehicle_id = ? AND status IN ('scheduled','boarding','in_transit')", [$tripId, $vehicleId])) throw new ValidationException('Choose an active trip for this vehicle.');
+            $this->updateById($deliveryId, ['vehicle_id' => $vehicleId, 'trip_id' => $tripId, 'operator_id' => $operatorId]);
+            return $this->transitionStatus($deliveryId, 'assigned', [
+                'description' => $tripId ? 'Assigned to a vehicle and scheduled on a trip.' : 'Assigned to a vehicle.',
+            ], $actorId);
+        });
     }
 
     /**

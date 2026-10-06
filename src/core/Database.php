@@ -208,14 +208,26 @@ final class Database
 
     public function commit(): void
     {
-        if ($this->txDepth === 1 && !$this->txFailed) {
+        if ($this->txDepth === 0) {
+            throw new \LogicException('No transaction is active.');
+        }
+        if ($this->txDepth === 1) {
+            if ($this->txFailed) {
+                $this->pdo->rollBack();
+                $this->txDepth = 0;
+                $this->txFailed = false;
+                throw new \RuntimeException('The transaction was rolled back because a nested operation failed.');
+            }
             $this->pdo->commit();
         }
-        $this->txDepth = max(0, $this->txDepth - 1);
+        $this->txDepth--;
     }
 
     public function rollback(): void
     {
+        if ($this->txDepth === 0) {
+            return;
+        }
         $this->txFailed = true;
         if ($this->txDepth === 1) {
             if ($this->pdo->inTransaction()) {

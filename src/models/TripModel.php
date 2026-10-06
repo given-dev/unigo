@@ -141,7 +141,8 @@ final class TripModel extends BaseModel
              LEFT JOIN operators o ON o.id = t.operator_id
              WHERE b.passenger_id = ?
                AND b.status IN ("pending","confirmed")
-               AND t.departure_time >= (NOW() - INTERVAL 3 HOUR)
+               AND t.status IN ("scheduled","boarding","in_transit")
+               AND (t.status IN ("boarding","in_transit") OR t.departure_time >= NOW())
              ORDER BY t.departure_time ASC
              LIMIT ' . $limit,
             [$passengerUserId]
@@ -331,6 +332,21 @@ final class TripModel extends BaseModel
             );
         }
 
+        // Serialize fleet changes across trips sharing a vehicle or driver.
+        $vehicle = $this->db->first('SELECT status FROM vehicles WHERE id = ? FOR UPDATE', [(int) $trip['vehicle_id']]);
+        $driver = $trip['driver_id']
+            ? $this->db->first('SELECT d.status, u.status AS user_status FROM drivers d JOIN users u ON u.id = d.user_id WHERE d.id = ? FOR UPDATE', [(int) $trip['driver_id']])
+            : null;
+        if ($status === 'boarding') {
+            $busy = $this->db->exists(
+                "SELECT 1 FROM trips WHERE id <> ? AND status IN ('boarding','in_transit') AND (vehicle_id = ? OR driver_id = ?)",
+                [$tripId, (int) $trip['vehicle_id'], $trip['driver_id']]
+            );
+            if ($busy || $vehicle['status'] !== 'active' || ($trip['driver_id'] && (!$driver || $driver['status'] !== 'available' || $driver['user_status'] !== 'active'))) {
+                throw new \App\Core\ConflictException('The vehicle or driver is unavailable for boarding.');
+            }
+        }
+
         $data = ['status' => $status];
         $now = date('Y-m-d H:i:s');
 
@@ -358,10 +374,6 @@ final class TripModel extends BaseModel
                 \App\Services\PaymentService::refundForBooking((int) $b['id'], $actorId);
                 NotificationService::tripCancelled((int) $b['passenger_id'], (string) $trip['trip_code'], (string) $trip['route_name']);
             }
-            $this->db->update('vehicles', ['status' => 'active'], 'id = ?', [(int) $trip['vehicle_id']]);
-            if ($trip['driver_id']) {
-                $this->db->update('drivers', ['status' => 'available'], 'id = ?', [(int) $trip['driver_id']]);
-            }
         }
         if ($status === 'boarding') {
             $this->db->update('vehicles', ['status' => 'on_trip'], 'id = ?', [(int) $trip['vehicle_id']]);
@@ -370,20 +382,22 @@ final class TripModel extends BaseModel
             }
             NotificationService::tripBoarding($tripId, (string) $trip['trip_code'], (string) $trip['route_name'], (string) $trip['departure_time']);
         }
-        if ($status === 'completed') {
-            $this->db->update('vehicles', ['status' => 'active'], 'id = ?', [(int) $trip['vehicle_id']]);
-            if ($trip['driver_id']) {
-                $this->db->update('drivers', [
-                    'status' => 'available',
-                    'total_trips' => (int) $trip['driver_id'] ? \App\Core\Database::instance()->value(
-                        'SELECT COUNT(*) + 1 FROM trips WHERE driver_id = ? AND status = "completed"',
-                        [(int) $trip['driver_id']]
-                    ) : 0,
-                ], 'id = ?', [(int) $trip['driver_id']]);
+        $this->updateById($tripId, $data);
+
+        if (in_array($status, ['scheduled', 'completed', 'cancelled'], true)
+            && in_array($trip['status'], ['boarding', 'in_transit'], true)) {
+            if (!$this->db->exists("SELECT 1 FROM trips WHERE vehicle_id = ? AND status IN ('boarding','in_transit')", [(int) $trip['vehicle_id']])) {
+                $this->db->update('vehicles', ['status' => 'active'], "id = ? AND status = 'on_trip'", [(int) $trip['vehicle_id']]);
+            }
+            if ($trip['driver_id'] && !$this->db->exists("SELECT 1 FROM trips WHERE driver_id = ? AND status IN ('boarding','in_transit')", [(int) $trip['driver_id']])) {
+                $this->db->update('drivers', ['status' => 'available'], "id = ? AND status = 'on_trip'", [(int) $trip['driver_id']]);
             }
         }
-
-        $this->updateById($tripId, $data);
+        if ($status === 'completed' && $trip['driver_id']) {
+            $this->db->update('drivers', [
+                'total_trips' => $this->db->count('SELECT COUNT(*) FROM trips WHERE driver_id = ? AND status = "completed"', [(int) $trip['driver_id']]),
+            ], 'id = ?', [(int) $trip['driver_id']]);
+        }
 
         \App\Core\ActivityLog::record(
             \App\Core\ActivityLog::TRIP_UPDATED,

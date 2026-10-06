@@ -27,6 +27,11 @@ final class RatingModel extends BaseModel
      */
     public function rate(array $data, int $passengerId): array
     {
+        return $this->db->transaction(fn () => $this->saveRating($data, $passengerId));
+    }
+
+    private function saveRating(array $data, int $passengerId): array
+    {
         $tripId = (int) $data['trip_id'];
         $rating = (int) $data['rating'];
         $comment = trim((string) ($data['comment'] ?? ''));
@@ -50,6 +55,7 @@ final class RatingModel extends BaseModel
         if ($trip['status'] !== 'completed') {
             throw new ValidationException('You can only rate a trip after it has been completed.');
         }
+        $this->db->first('SELECT id FROM drivers WHERE id = ? FOR UPDATE', [(int) $trip['driver_id']]);
 
         $booking = $this->db->first(
             'SELECT id FROM bookings
@@ -114,6 +120,17 @@ final class RatingModel extends BaseModel
         }
         $n = (int) $value;
         return ($n >= 1 && $n <= 5) ? $n : null;
+    }
+
+    public function setPublished(int $ratingId, bool $published): void
+    {
+        $this->db->transaction(function () use ($ratingId, $published): void {
+            $rating = $this->find($ratingId);
+            if (!$rating) throw new \App\Core\NotFoundException('Rating not found.');
+            $this->db->first('SELECT id FROM drivers WHERE id = ? FOR UPDATE', [(int) $rating['driver_id']]);
+            $this->updateById($ratingId, ['is_published' => $published ? 1 : 0]);
+            $this->recalculateDriverRating((int) $rating['driver_id']);
+        });
     }
 
     /** Recompute the cached aggregate in one UPDATE (no per-row queries). */

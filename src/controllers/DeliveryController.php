@@ -71,15 +71,16 @@ final class DeliveryController extends Controller
                 'pickup_address'     => $this->request->str('pickup_address'),
                 'dropoff_address'    => $this->request->str('dropoff_address'),
                 'parcel_description' => $this->request->str('parcel_description'),
-                'weight_kg'          => $this->request->float('weight_kg', 1.0),
+                'weight_kg'          => $this->request->input('weight_kg', 1.0),
                 'is_fragile'         => $this->request->bool('is_fragile') ? 1 : 0,
-                'declared_value'     => $this->request->float('declared_value', 0.0),
+                'declared_value'     => $this->request->input('declared_value', 0.0),
                 'pickup_latitude'    => null,
                 'pickup_longitude'   => null,
                 'dropoff_latitude'   => null,
                 'dropoff_longitude'  => null,
             ], (int) Auth::id());
         } catch (\App\Core\AppException $e) {
+            Flash::withInput($_POST, []);
             Flash::error($e->getMessage());
             $this->redirect('/deliveries/new');
         } catch (\Throwable $e) {

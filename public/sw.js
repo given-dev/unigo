@@ -13,9 +13,9 @@
    ========================================================================== */
 'use strict';
 
-var VERSION = 'unigo-static-v1';
+var VERSION = 'unigo-static-v2';
+var SCOPE_URL = new URL('./', self.location.href);
 var PRECACHE = [
-    './',
     './offline.html',
     './manifest.webmanifest',
     './assets/css/unigo.css',
@@ -39,7 +39,7 @@ self.addEventListener('activate', function (event) {
         caches.keys()
             .then(function (keys) {
                 return Promise.all(keys.map(function (key) {
-                    return key === VERSION ? null : caches.delete(key);
+                    return key !== VERSION && key.indexOf('unigo-static-') === 0 ? caches.delete(key) : null;
                 }));
             })
             .then(function () { return self.clients.claim(); })
@@ -56,16 +56,18 @@ self.addEventListener('fetch', function (event) {
     if (url.origin !== self.location.origin) {
         return; // tiles, fonts and CDNs are handled by the browser
     }
+    if (url.pathname.indexOf(SCOPE_URL.pathname) !== 0) return;
+    var path = url.pathname.slice(SCOPE_URL.pathname.length);
 
     // Never cache dynamic data.
-    if (url.pathname.indexOf('/api/') === 0 || request.headers.get('X-Requested-With') === 'XMLHttpRequest') {
+    if (path.indexOf('api/') === 0 || request.headers.get('X-Requested-With') === 'XMLHttpRequest') {
         return;
     }
 
     if (request.mode === 'navigate') {
         event.respondWith(
             fetch(request).catch(function () {
-                return caches.match('./offline.html').then(function (cached) {
+                return caches.match(new URL('offline.html', SCOPE_URL).href).then(function (cached) {
                     return cached || new Response(
                         '<h1>You are offline</h1><p>Reconnect to load UniGo.</p>',
                         { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
@@ -76,7 +78,7 @@ self.addEventListener('fetch', function (event) {
         return;
     }
 
-    if (url.pathname.indexOf('/assets/') === 0 || /\.(css|js|svg|png|jpe?g|webp|woff2?)$/i.test(url.pathname)) {
+    if (path.indexOf('assets/') === 0 && /\.(css|js|svg|png|jpe?g|webp|woff2?)$/i.test(path)) {
         event.respondWith(
             caches.match(request).then(function (cached) {
                 var network = fetch(request).then(function (response) {

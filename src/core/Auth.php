@@ -182,7 +182,8 @@ final class Auth
 
         // Rehash transparently if the cost factor changed.
         if (password_needs_rehash((string) $hash, PASSWORD_DEFAULT, ['cost' => 12])) {
-            Database::instance()->update('users', ['password_hash' => self::hashPassword($password)], 'id = ?', [(int) $user['id']]);
+            $user['password_hash'] = self::hashPassword($password);
+            Database::instance()->update('users', ['password_hash' => $user['password_hash']], 'id = ?', [(int) $user['id']]);
         }
 
         self::login($user, $remember);

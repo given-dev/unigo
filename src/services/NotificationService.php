@@ -97,12 +97,13 @@ final class NotificationService
 
     public static function tripAssigned(int $driverId, int $tripId, string $routeName, string $departure): void
     {
+        $userId = (int) Database::instance()->value('SELECT user_id FROM drivers WHERE id = ?', [$driverId]);
         self::push(
-            $driverId,
+            $userId,
             'trip',
             'New trip assigned',
             $routeName . ' departs at ' . date('H:i', strtotime($departure)) . '.',
-            '/driver/trips/' . $tripId,
+            '/driver/trips?trip=' . $tripId,
             'info',
             'steering'
         );
@@ -120,7 +121,7 @@ final class NotificationService
                 'trip',
                 'Boarding now: ' . $tripCode,
                 $routeName . ' is boarding. Please be at the pickup point before ' . date('H:i', strtotime($departure)) . '.',
-                '/passenger/trips/' . $tripId,
+                '/trips/' . $tripId,
                 'info',
                 'bus'
             );
@@ -160,7 +161,7 @@ final class NotificationService
             'trip',
             'Your vehicle is approaching',
             'Trip ' . $tripCode . ' is about ' . $minutes . ' minutes away.',
-            '/passenger/trips/' . $tripId,
+            '/tracking?trip=' . $tripId,
             'info',
             'map'
         );
@@ -186,7 +187,7 @@ final class NotificationService
             'emergency',
             'Emergency alert nearby: ' . strtoupper(str_replace('_', ' ', $type)),
             'Emergency ' . $reference . ' has been raised near your vehicle. Check the emergency screen.',
-            '/driver/emergency',
+            '/driver/sos',
             'danger',
             'sos'
         );

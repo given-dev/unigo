@@ -56,6 +56,20 @@
         });
     }
 
+    function vehiclePopup(v) {
+        return '<div class="map-popup__title">' + escapeHtml(v.label || 'Vehicle') + '</div>' +
+            '<div class="map-popup__row"><span>Status</span><span>' + escapeHtml(v.status || '-') + '</span></div>' +
+            (v.speed !== undefined && v.speed !== null ? '<div class="map-popup__row"><span>Speed</span><span>' + escapeHtml(v.speed) + ' km/h</span></div>' : '') +
+            (v.eta ? '<div class="map-popup__row"><span>ETA</span><span>' + escapeHtml(v.eta) + '</span></div>' : '') +
+            (v.simulated ? '<div class="sim-ribbon mt-2">Simulated</div>' : '');
+    }
+
+    function addVehicle(map, v) {
+        return window.L.marker([v.lat, v.lng], {
+            icon: vehicleIcon(v), zIndexOffset: 500, title: v.label || 'Vehicle'
+        }).addTo(map).bindPopup(vehiclePopup(v));
+    }
+
     function fallback(el, message) {
         el.innerHTML = '<div class="empty" style="height:100%">' +
             '<span class="empty__icon"><span class="icon" data-icon="wifi-off"></span></span>' +
@@ -113,17 +127,7 @@
 
         var vehicles = {};
         (options.vehicles || []).forEach(function (v) {
-            var marker = window.L.marker([v.lat, v.lng], {
-                icon: vehicleIcon(v),
-                zIndexOffset: 500,
-                title: v.label || 'Vehicle'
-            }).addTo(map);
-            marker.bindPopup(
-                '<div class="map-popup__title">' + escapeHtml(v.label || 'Vehicle') + '</div>' +
-                '<div class="map-popup__row"><span>Status</span><span>' + escapeHtml(v.status || '-') + '</span></div>' +
-                (v.speed !== undefined ? '<div class="map-popup__row"><span>Speed</span><span>' + escapeHtml(v.speed) + ' km/h</span></div>' : '') +
-                (v.simulated ? '<div class="sim-ribbon mt-2">Simulated</div>' : '')
-            );
+            var marker = addVehicle(map, v);
             if (v.id) vehicles[v.id] = marker;
         });
 
@@ -151,17 +155,23 @@
                 interval: options.pollInterval || 10000,
                 onData: function (res) {
                     var payload = (res && res.data) || {};
+                    var present = {};
                     (payload.vehicles || []).forEach(function (v) {
+                        present[v.id] = true;
                         var marker = map.vehicles[v.id];
-                        if (!marker) return;
+                        if (!marker) {
+                            map.vehicles[v.id] = addVehicle(map, v);
+                            return;
+                        }
                         marker.setLatLng([v.lat, v.lng]);
                         marker.setIcon(vehicleIcon(v));
-                        marker.setPopupContent(
-                            '<div class="map-popup__title">' + escapeHtml(v.label || 'Vehicle') + '</div>' +
-                            '<div class="map-popup__row"><span>Status</span><span>' + escapeHtml(v.status || '-') + '</span></div>' +
-                            (v.eta ? '<div class="map-popup__row"><span>ETA</span><span>' + escapeHtml(v.eta) + '</span></div>' : '') +
-                            (v.simulated ? '<div class="sim-ribbon mt-2">Simulated</div>' : '')
-                        );
+                        marker.setPopupContent(vehiclePopup(v));
+                    });
+                    Object.keys(map.vehicles).forEach(function (id) {
+                        if (!present[id]) {
+                            map.removeLayer(map.vehicles[id]);
+                            delete map.vehicles[id];
+                        }
                     });
                     if (options.onUpdate) options.onUpdate(payload, map);
                 }

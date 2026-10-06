@@ -192,7 +192,7 @@ final class Request
     public function float(string $key, float $default = 0.0): float
     {
         $v = $this->input($key, $default);
-        return is_numeric($v) ? (float) $v : $default;
+        return is_numeric($v) && is_finite((float) $v) ? (float) $v : $default;
     }
 
     public function bool(string $key, bool $default = false): bool
@@ -200,6 +200,9 @@ final class Request
         $v = $this->input($key, $default);
         if (is_bool($v)) {
             return $v;
+        }
+        if (!is_scalar($v)) {
+            return $default;
         }
         return in_array(strtolower((string) $v), ['1', 'true', 'yes', 'on'], true);
     }

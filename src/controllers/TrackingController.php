@@ -10,7 +10,6 @@ namespace App\Controllers;
 use App\Core\Auth;
 use App\Core\ErrorHandler;
 use App\Models\TripModel;
-use App\Models\VehicleModel;
 
 final class TrackingController extends Controller
 {
@@ -96,25 +95,25 @@ final class TrackingController extends Controller
             ];
         }
 
-        if (!empty($trip['origin_latitude'])) {
+        if (isset($trip['origin_latitude'], $trip['origin_longitude'])) {
             $markers[] = ['lat' => (float) $trip['origin_latitude'], 'lng' => (float) $trip['origin_longitude'], 'type' => 'start', 'label' => (string) ($trip['origin_name'] ?? 'Origin')];
         }
-        if (!empty($trip['destination_latitude'])) {
+        if (isset($trip['destination_latitude'], $trip['destination_longitude'])) {
             $markers[] = ['lat' => (float) $trip['destination_latitude'], 'lng' => (float) $trip['destination_longitude'], 'type' => 'end', 'label' => (string) ($trip['destination_name'] ?? 'Destination')];
         }
 
         $vehicles = [];
         $vehicleId = (int) ($trip['vehicle_id'] ?? 0);
-        $positions = $this->safe(static fn () => (new VehicleModel())->positionsForMap(200), []);
+        $positions = $this->safe(static fn () => \App\Services\GpsService::latestPositions([$vehicleId], 1), []);
         foreach ($positions as $pos) {
-            if ($vehicleId > 0 && (int) $pos['id'] !== $vehicleId) {
+            if ($vehicleId > 0 && (int) $pos['vehicle_id'] !== $vehicleId) {
                 continue;
             }
             if ($pos['latitude'] === null || $pos['longitude'] === null) {
                 continue;
             }
             $vehicles[] = [
-                'id'        => (int) $pos['id'],
+                'id'        => (int) $pos['vehicle_id'],
                 'lat'       => (float) $pos['latitude'],
                 'lng'       => (float) $pos['longitude'],
                 'label'     => (string) ($pos['registration_number'] ?? 'Vehicle'),

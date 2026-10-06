@@ -91,7 +91,9 @@ final class DashboardController extends Controller
             'pageTitle'           => ucfirst($role) . ' dashboard',
             'pageSub'             => 'Platform overview',
             'role'                => $role,
-            'headline'            => $this->safe(static fn () => (new StatsModel())->headline(), []),
+            'headline'            => $this->safe(static fn () => in_array($role, ['driver', 'operator'], true)
+                ? (new StatsModel())->workspaceHeadline($role, (int) ($role === 'driver' ? Auth::driverId() : Auth::operatorId()))
+                : (new StatsModel())->headline(), []),
             'unreadNotifications' => $notif['unread'],
             'recentNotifications' => $notif['recent'],
         ], 'layouts/app');

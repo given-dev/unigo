@@ -98,7 +98,7 @@ $perRow = max(1, $perRow);
             ]) ?>
         </div>
     </div>
-<?php elseif (empty($seats)): ?>
+<?php elseif (empty($seats) || $free === 0 || !in_array($trip['status'] ?? '', ['scheduled', 'boarding'], true) || strtotime((string) ($trip['departure_time'] ?? '')) <= time()): ?>
     <div class="card mt-3">
         <div class="card__body">
             <?= \App\Core\View::partial('partials/empty-state', [

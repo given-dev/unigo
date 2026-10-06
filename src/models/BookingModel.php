@@ -84,7 +84,7 @@ final class BookingModel extends BaseModel
 
         $bookings = $this->db->select(
             'SELECT id, reference, seat_number, status, passenger_id FROM bookings
-             WHERE trip_id = ? AND status IN ("pending","confirmed")',
+             WHERE trip_id = ? AND status IN ("pending","confirmed","completed")',
             [$tripId]
         );
 
@@ -116,17 +116,17 @@ final class BookingModel extends BaseModel
         // derived from capacity.
         if ($out === []) {
             $trip = $result['trip'];
-            $taken = array_column($result['bookings'], 'seat_number');
-            $shared = ($trip['vehicle_type'] === 'shared_ride');
+            $reservations = array_column($result['bookings'], null, 'seat_number');
             for ($i = 1; $i <= (int) $trip['capacity']; $i++) {
                 $label = (string) $i;
+                $booking = $reservations[$label] ?? null;
                 $out[] = [
                     'seat_number'  => $label,
                     'seat_type'    => 'standard',
                     'row_number'   => (int) ceil($i / 4),
-                    'is_available' => !in_array($label, $taken, true),
-                    'is_mine'      => false,
-                    'status'       => null,
+                    'is_available' => $booking === null,
+                    'is_mine'      => $booking !== null && (int) $booking['passenger_id'] === $passengerUserId,
+                    'status'       => $booking['status'] ?? null,
                 ];
             }
         }
@@ -165,12 +165,13 @@ final class BookingModel extends BaseModel
 
             // 1. Lock the trip row so availability cannot change mid-transaction.
             $trip = $db->first(
-                'SELECT t.*, r.name AS route_name, r.base_fare, r.status AS route_status, v.status AS vehicle_status, o.approval_status, v.capacity, v.vehicle_type,
+                'SELECT t.*, r.name AS route_name, r.base_fare, r.status AS route_status, v.status AS vehicle_status, o.approval_status, ou.status AS operator_user_status, v.capacity, v.vehicle_type,
                         v.registration_number
                  FROM trips t
                  INNER JOIN routes r ON r.id = t.route_id
                  INNER JOIN vehicles v ON v.id = t.vehicle_id
                  LEFT JOIN operators o ON o.id = t.operator_id
+                 LEFT JOIN users ou ON ou.id = o.user_id
                  WHERE t.id = ?
                  FOR UPDATE',
                 [$tripId]
@@ -179,7 +180,7 @@ final class BookingModel extends BaseModel
             if (!$trip) {
                 throw new \App\Core\NotFoundException('That trip is no longer available.');
             }
-            if ($trip['route_status'] !== 'active' || !in_array($trip['vehicle_status'], ['active','on_trip'], true) || ($trip['operator_id'] && $trip['approval_status'] !== 'approved')) {
+            if ($trip['route_status'] !== 'active' || !in_array($trip['vehicle_status'], ['active','on_trip'], true) || ($trip['operator_id'] && ($trip['approval_status'] !== 'approved' || $trip['operator_user_status'] !== 'active'))) {
                 throw new ConflictException('This trip is currently unavailable for booking.');
             }
             if ($trip['status'] !== 'scheduled' && $trip['status'] !== 'boarding') {
@@ -502,7 +503,7 @@ final class BookingModel extends BaseModel
             ['status' => 'completed'],
             "trip_id = ? AND status IN ('pending','confirmed')",
             [$tripId]
-        )->rowCount();
+        );
     }
 
     public function countToday(): int

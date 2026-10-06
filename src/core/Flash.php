@@ -48,6 +48,7 @@ final class Flash
     public static function withInput(array $input, array $errors): void
     {
         unset($input['password'], $input['password_confirmation'], $input['_token']);
+        $input = array_filter($input, static fn ($value) => is_scalar($value) || $value === null);
         $_SESSION['_old_input'] = $input;
         $_SESSION['_errors'] = $errors;
     }

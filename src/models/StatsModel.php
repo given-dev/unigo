@@ -56,6 +56,30 @@ final class StatsModel extends BaseModel
         ], $days);
     }
 
+    /** Driver and operator dashboards must describe their own workspace. */
+    public function workspaceHeadline(string $role, int $profileId): array
+    {
+        if (!in_array($role, ['driver', 'operator'], true)) {
+            throw new \InvalidArgumentException('Unknown workspace role.');
+        }
+        $column = $role === 'driver' ? 'driver_id' : 'operator_id';
+        $trips = $this->db->first(
+            "SELECT COUNT(*) AS total_trips, COALESCE(SUM(status IN ('boarding','in_transit')),0) AS active_trips
+             FROM trips WHERE $column = ?", [$profileId]
+        );
+        $trips['today_bookings'] = $this->db->count(
+            "SELECT COUNT(*) FROM bookings b JOIN trips t ON t.id = b.trip_id WHERE t.$column = ? AND DATE(b.booked_at) = CURDATE()", [$profileId]
+        );
+        if ($role === 'driver') {
+            $trips['active_routes'] = $this->db->count('SELECT COUNT(DISTINCT r.id) FROM routes r JOIN trips t ON t.route_id = r.id WHERE t.driver_id = ? AND r.status = "active"', [$profileId]);
+        } else {
+            $trips['active_vehicles'] = $this->db->count("SELECT COUNT(*) FROM vehicles WHERE operator_id = ? AND status IN ('active','on_trip')", [$profileId]);
+            $trips['total_drivers'] = $this->db->count('SELECT COUNT(*) FROM drivers WHERE operator_id = ?', [$profileId]);
+            $trips['today_revenue'] = (float) $this->db->value("SELECT COALESCE(SUM(p.amount),0) FROM payments p JOIN bookings b ON b.id = p.booking_id JOIN trips t ON t.id = b.trip_id WHERE t.operator_id = ? AND p.status = 'successful' AND DATE(p.created_at) = CURDATE()", [$profileId]);
+        }
+        return $trips;
+    }
+
     public function bookingsOverTime(int $days = 14): array
     {
         return $this->dailySeriesQuery('bookings', 'booked_at', [
@@ -96,7 +120,7 @@ final class StatsModel extends BaseModel
         return $this->db->select(
             "SELECT r.id, r.name, r.route_code,
                     COUNT(b.id) AS bookings,
-                    COALESCE(SUM(CASE WHEN b.status IN ('confirmed','completed') THEN b.fare ELSE 0 END),0) AS revenue
+                    COALESCE(SUM(CASE WHEN b.payment_status = 'paid' AND b.status IN ('confirmed','completed') THEN b.fare ELSE 0 END),0) AS revenue
              FROM routes r
              LEFT JOIN trips t ON t.route_id = r.id
              LEFT JOIN bookings b ON b.trip_id = t.id AND b.booked_at >= (CURDATE() - INTERVAL 30 DAY)
@@ -126,12 +150,11 @@ final class StatsModel extends BaseModel
         $limit = max(1, min(30, $limit));
         return $this->db->select(
             "SELECT o.id, o.company_name, o.rating_avg,
-                    COUNT(DISTINCT v.id) AS vehicles,
+                    (SELECT COUNT(*) FROM vehicles v WHERE v.operator_id = o.id) AS vehicles,
                     COUNT(DISTINCT t.id) AS trips,
                     COUNT(b.id) AS bookings,
-                    COALESCE(SUM(CASE WHEN b.status IN ('confirmed','completed') THEN b.fare ELSE 0 END),0) AS revenue
+                    COALESCE(SUM(CASE WHEN b.payment_status = 'paid' AND b.status <> 'cancelled' THEN b.fare ELSE 0 END),0) AS revenue
              FROM operators o
-             LEFT JOIN vehicles v ON v.operator_id = o.id
              LEFT JOIN trips t ON t.operator_id = o.id
              LEFT JOIN bookings b ON b.trip_id = t.id AND b.booked_at >= (CURDATE() - INTERVAL 30 DAY)
              WHERE o.approval_status = 'approved'

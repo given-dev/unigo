@@ -26,7 +26,8 @@ pages=re.findall(r"'(/(?:admin|operator|authority|driver)/[^']+)'\s*=>",open('sr
 for role in ['passenger','admin','operator','authority','driver']:
  op=client();_,html=request(op,'/login')
  status,html=request(op,'/login',{'_token':token(html),'email':role+'@unigo.test','password':'UniGo@2026'})
- ok(status==200 and 'Sign in to your account' not in html,f'{role} login failed')
+ _,session=request(op,'/api/session')
+ ok(status==200 and json.loads(session)['data']['user_id'] is not None,f'{role} login failed')
  targets=['/profile','/notifications','/dashboard']+[p for p in pages if p.startswith('/'+role+'/')]
  if role=='passenger':targets+=['/ratings','/trips/search','/bookings','/payments','/deliveries','/tracking','/complaints','/emergency/new']
  for path in targets:

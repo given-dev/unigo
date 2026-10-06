@@ -41,12 +41,16 @@ jobs:
           mysql -h 127.0.0.1 -u root < database/schema.sql
           php database/seed.php
       - name: Booking regression
-        run: php tests/booking.php
+        run: |
+          php tests/booking.php
+          php tests/system.php
       - name: Seat selection regression
         run: |
           npm install --prefix "$RUNNER_TEMP/unigo-tests" jsdom
           NODE_PATH="$RUNNER_TEMP/unigo-tests/node_modules" node tests/seatmap.cjs
           NODE_PATH="$RUNNER_TEMP/unigo-tests/node_modules" node tests/confirmation.cjs
+          NODE_PATH="$RUNNER_TEMP/unigo-tests/node_modules" node tests/maps.cjs
+          node tests/serviceworker.cjs
       - name: Role and full journey tests
         run: |
           php -S 127.0.0.1:8000 -t public scripts/router.php > "$RUNNER_TEMP/unigo-server.log" 2>&1 &
@@ -64,3 +68,4 @@ jobs:
           python tests/http_smoke.py
           python tests/journey.py
           python tests/authentication.py
+          python tests/workflows.py

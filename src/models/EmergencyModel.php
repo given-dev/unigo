@@ -18,6 +18,7 @@ use App\Core\Config;
 use App\Core\Database;
 use App\Core\Paginator;
 use App\Core\ValidationException;
+use App\Core\Validator;
 use App\Services\NotificationService;
 use App\Services\ReferenceGenerator;
 
@@ -40,6 +41,10 @@ final class EmergencyModel extends BaseModel
      */
     public function raise(int $userId, array $data): array
     {
+        Validator::make($data)->assert([
+            'latitude' => 'nullable|latitude', 'longitude' => 'nullable|longitude',
+            'contact_phone' => 'nullable|phone|max:25',
+        ]);
         $type = (string) ($data['emergency_type'] ?? 'other');
         if (!in_array($type, self::TYPES, true)) {
             throw new ValidationException('Please choose a valid emergency type.');
@@ -65,10 +70,17 @@ final class EmergencyModel extends BaseModel
                      INNER JOIN trips t ON t.id = b.trip_id
                      WHERE b.passenger_id = ?
                        AND b.status IN ('pending','confirmed')
-                       AND t.departure_time >= (NOW() - INTERVAL 4 HOUR)
-                     ORDER BY b.booked_at DESC LIMIT 1",
+                       AND t.status IN ('boarding','in_transit')
+                     ORDER BY t.departure_time DESC LIMIT 1",
                     [$userId]
                 );
+                if (!$context) {
+                    $context = $this->db->first(
+                        "SELECT t.vehicle_id, t.id AS trip_id FROM trips t JOIN drivers d ON d.id = t.driver_id
+                         WHERE d.user_id = ? AND t.status IN ('boarding','in_transit') ORDER BY t.departure_time DESC LIMIT 1",
+                        [$userId]
+                    );
+                }
                 $vehicleId = $vehicleId ?: ($context['vehicle_id'] ?? null);
                 $tripId    = $tripId ?: ($context['trip_id'] ?? null);
             }
@@ -111,7 +123,9 @@ final class EmergencyModel extends BaseModel
     private function alertResponders(int $alertId, string $reference, string $type, ?int $vehicleId, ?int $tripId): void
     {
         $admins = $this->db->select(
-            "SELECT u.id FROM users u
+            "SELECT DISTINCT u.id,
+                    EXISTS (SELECT 1 FROM user_roles ar JOIN roles rr ON rr.id = ar.role_id WHERE ar.user_id = u.id AND rr.slug = 'admin') AS is_admin
+             FROM users u
              INNER JOIN user_roles ur ON ur.user_id = u.id
              INNER JOIN roles r ON r.id = ur.role_id
              WHERE r.slug IN ('admin','authority') AND u.status = 'active'
@@ -123,14 +137,16 @@ final class EmergencyModel extends BaseModel
                 'emergency',
                 'SOS raised: ' . $reference,
                 str_replace('_', ' ', $type) . ' emergency reported by a UniGo user.',
-                '/admin/emergencies',
+                $admin['is_admin'] ? '/admin/emergencies' : '/authority/emergencies',
                 'danger',
                 'sos'
             );
         }
 
         if ($vehicleId) {
-            $driverId = $this->db->value('SELECT driver_id FROM vehicles WHERE id = ?', [$vehicleId]);
+            $driverId = $tripId
+                ? $this->db->value('SELECT driver_id FROM trips WHERE id = ?', [$tripId])
+                : $this->db->value('SELECT driver_id FROM vehicles WHERE id = ?', [$vehicleId]);
             if ($driverId) {
                 $driverUserId = $this->db->value('SELECT user_id FROM drivers WHERE id = ?', [$driverId]);
                 if ($driverUserId) {
@@ -146,7 +162,7 @@ final class EmergencyModel extends BaseModel
                         'emergency',
                         'Emergency on your vehicle',
                         'SOS ' . $reference . ' (' . str_replace('_', ' ', $type) . ') involves one of your vehicles.',
-                        '/operator/emergencies',
+                        $tripId ? '/operator/trips?trip=' . $tripId : '/operator/vehicles',
                         'danger',
                         'sos'
                     );

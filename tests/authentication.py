@@ -58,6 +58,7 @@ def sign_in(op, email, password='UniGo@2026', remember=False):
 
 
 email = 'session-' + str(time.time_ns()) + '@unigo.test'
+attempt_start = sql('SELECT COALESCE(MAX(id),0) AS id FROM login_attempts')[0]['id']
 op, jar = client()
 _, html, _, _ = request(op, '/register')
 status, html, _, _ = request(op, '/register', {'_token': token(html),
@@ -91,7 +92,7 @@ try:
         headers={'Cookie': old_cookies})
     ok(status == 401, 'Destroyed session IDs cannot be replayed')
     status, html, _, _ = sign_in(op, email, remember=True)
-    ok(status == 200 and 'Sign in to your account' not in html, 'Sign-in works again after logout')
+    ok(status == 200 and '/profile' in html and 'loginForm' not in html, 'Sign-in works again after logout')
     _, html, _, _ = request(op, '/profile')
     ok(token(html) != old_token, 'Authentication rotates the CSRF token')
     remembered = next(copy.copy(c) for c in jar if c.name == 'unigo_remember')
@@ -175,11 +176,21 @@ try:
     status, _, _, _ = request(resume, '/api/notifications/unread-count')
     ok(status == 401, 'Absolute expiry signs out active sessions')
 
+    # A transparent cost upgrade must establish the session with the new hash.
+    code = "require 'src/bootstrap.php';App\\Core\\Database::instance()->update('users',['password_hash'=>password_hash('BetterPass2026!',PASSWORD_BCRYPT,['cost'=>4])],'id = ?',[(int)$argv[1]]);"
+    subprocess.run([PHP, '-r', code, str(user_id)], check=True, capture_output=True)
+    legacy, _ = client()
+    status, html, _, _ = sign_in(legacy, email, 'BetterPass2026!')
+    ok(status == 200 and 'loginForm' not in html, 'Password rehash keeps the login redirect authenticated')
+    status, raw, _, _ = request(legacy, '/api/session')
+    ok(status == 200 and json.loads(raw)['data']['user_id'] == user_id,
+        'Password rehash keeps subsequent requests authenticated')
+
     visitor, _ = client()
     for i in range(6):
         sign_in(visitor, f'unknown-{time.time_ns()}-{i}@unigo.test', 'WrongPassword')
     status, html, _, _ = sign_in(visitor, email, 'BetterPass2026!')
-    ok(status == 200 and 'Sign in to your account' not in html,
+    ok(status == 200 and 'loginForm' not in html,
         'IP limit allows a valid account after six failures across different accounts')
     request(visitor, '/logout', {'_token': token(html)})
     for _ in range(5):
@@ -188,8 +199,12 @@ try:
     ok('Too many sign-in attempts' in html, 'Per-account limit blocks repeated failed credentials')
     sql("UPDATE login_attempts SET attempted_at=DATE_SUB(NOW(),INTERVAL 901 SECOND) WHERE identifier_hash=SHA2(?,256)", ['email:' + email])
     _, html, _, _ = sign_in(visitor, email, 'BetterPass2026!')
-    ok('Sign in to your account' not in html, 'Account limits expire on the application clock')
+    ok('loginForm' not in html, 'Account limits expire on the application clock')
 finally:
     sql('DELETE FROM users WHERE id=?', [user_id])
+    # Failed login fixtures must not lock out later suites on the same test IP.
+    sql("DELETE FROM login_attempts WHERE id > ? AND identifier_hash=SHA2(?,256)",
+        [attempt_start, 'ip:127.0.0.1'])
+    sql("DELETE FROM login_attempts WHERE identifier_hash=SHA2(?,256)", ['email:' + email])
 
 print('Authentication regression checks passed:', checks)

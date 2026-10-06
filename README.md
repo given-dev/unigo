@@ -86,16 +86,22 @@ Use a **disposable seeded database** for backend tests:
 
 ```sh
 php tests/booking.php
+php tests/system.php
 python tests/http_smoke.py http://127.0.0.1:8000
 python tests/journey.py http://127.0.0.1:8000
 python tests/authentication.py http://127.0.0.1:8000
+python tests/workflows.py http://127.0.0.1:8000
 ```
 
 `tests/booking.php` verifies passenger-profile creation, paid checkout, duplicate booking rejection, refund, released-seat rebooking, and invalid-seat rejection. Its changes are rolled back.
 
+`tests/system.php` checks nested transaction rollback, seat-map ownership, fleet lifecycle conflicts, scoped dashboards and revenue, refund failures, parcel assignment, notification recipients, SOS context and tracking in large fleets. Its database changes are rolled back. `tests/workflows.py` checks parcel delivery from creation through driver handover, invalid form input, complaint and SOS creation, and access to other users' records. It removes its test customer afterward. Both require a disposable seeded database.
+
 `tests/http_smoke.py` logs into all five roles, opens all staff workspaces, and checks passenger restrictions and JSON APIs. It requires the development server and seeded accounts. `tests/journey.py` writes an operator, fleet, driver, trip, passenger, booking, GPS report, and rating to verify a full journey and operator isolation. Run it only on a disposable database. GitHub Actions runs these checks automatically.
 
 For the JavaScript seat-selection regression, install `jsdom` outside the repository and set `NODE_PATH` to that installation's `node_modules`, then run `node tests/seatmap.cjs`.
+
+Also run `node tests/confirmation.cjs` and `node tests/maps.cjs` with the same `NODE_PATH`. Run `node tests/serviceworker.cjs` to check that offline caching excludes dynamic pages and uploaded files, supports a subdirectory installation, and preserves other applications' caches.
 
 `tests/authentication.py` exercises logout, session replay, remember-token rotation, expiry, password changes across two clients, suspended/inactive accounts, changed roles, profile validation and login lockouts. It invokes PHP for fixture changes; set `UNIGO_TEST_PHP` when PHP is not on your PATH. Run it only against a disposable database.
 

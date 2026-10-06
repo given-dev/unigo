@@ -90,6 +90,7 @@ final class GpsService
      */
     public static function latestPositions(?array $vehicleIds = null, int $limit = 200): array
     {
+        if ($vehicleIds === []) return [];
         $limit = max(1, min(500, $limit));
         $sql = "SELECT v.id AS vehicle_id, v.registration_number, v.vehicle_type, v.status,
                        vl.latitude, vl.longitude, vl.speed, vl.heading, vl.recorded_at,
