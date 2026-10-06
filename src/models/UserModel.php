@@ -76,6 +76,9 @@ final class UserModel extends BaseModel
      */
     public function createUser(array $data, array $roles, array $profile = [], string $profileTable = ''): int
     {
+        if (!\App\Core\Config::get('domain.demo_mode', false) && str_ends_with(strtolower(trim((string)$data['email'])), '@unigo.test')) {
+            throw new \App\Core\ValidationException('Use a real email address; the example account domain is reserved.');
+        }
         return $this->db->transaction(function () use ($data, $roles, $profile, $profileTable): int {
             $userId = $this->create(array_merge([
                 'email'         => strtolower(trim((string) $data['email'])),

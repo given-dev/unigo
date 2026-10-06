@@ -13,11 +13,20 @@ final class CashPaymentService
         $db = Database::instance();
         $row = $db->first('SELECT b.*, t.operator_id, t.driver_id AS assigned_driver, t.status AS trip_status FROM bookings b JOIN trips t ON t.id=b.trip_id WHERE b.id=? FOR UPDATE', [$id]);
         if (!$row) throw new NotFoundException('Booking not found.');
+        if ((bool) $row['is_simulated']) throw new ConflictException('Example bookings cannot receive real cash payments.');
         $allowed = Auth::isAdmin()
             || (Auth::isOperator() && Auth::operatorId() !== null && (int) $row['operator_id'] === Auth::operatorId())
             || (!$refund && Auth::isDriver() && Auth::driverId() !== null && (int) $row['assigned_driver'] === Auth::driverId());
         if (!$allowed) throw new AuthorizationException('You cannot record cash for this booking.');
         return $row;
+    }
+
+    /** Compatibility with the original live-operation facade. */
+    public static function record(int $bookingId, bool $refund = false): array
+    {
+        if (!$refund) return self::collect($bookingId);
+        self::refund($bookingId);
+        return Database::instance()->first("SELECT * FROM payments WHERE booking_id=? AND method='cash' AND is_mock=0 AND status='refunded' ORDER BY id DESC LIMIT 1", [$bookingId]) ?? [];
     }
 
     public static function collect(int $bookingId): array
@@ -30,7 +39,7 @@ final class CashPaymentService
             $id = $db->insert('payments', [
                 'reference' => $reference, 'booking_id' => $bookingId, 'user_id' => $booking['passenger_id'],
                 'amount' => $booking['fare'], 'currency' => $booking['currency'], 'method' => 'cash',
-                'provider' => 'cash', 'provider_reference' => $reference, 'status' => 'successful',
+                'provider' => 'cash_collection', 'provider_reference' => $reference, 'status' => 'successful',
                 'is_mock' => 0, 'initiated_by' => Auth::id(), 'completed_at' => date('Y-m-d H:i:s'),
             ]);
             $db->update('bookings', ['payment_status' => 'paid'], 'id=?', [$bookingId]);

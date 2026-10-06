@@ -64,7 +64,7 @@ final class StubController extends Controller
         '/admin/ratings'      => ['Ratings', 'Passenger ratings for drivers and vehicles.', 'admin'],
         '/admin/reports'      => ['Reports', 'Platform-wide reporting.', 'admin'],
         '/admin/audit'        => ['Activity log', 'Administrative and system activity.', 'admin'],
-        '/admin/settings'     => ['Settings', 'Platform configuration and demo controls.', 'admin'],
+        '/admin/settings'     => ['Settings', 'Support contacts and platform configuration.', 'admin'],
     ];
 
     public function show(): void

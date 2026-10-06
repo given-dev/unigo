@@ -2,6 +2,34 @@
 
 PHP 8 / MySQL transport and parcel management for Uganda. No Composer build is required.
 
+## Install for real use
+
+Live mode is the default. It has no example accounts, invented company data, automatic payments or simulated GPS. Existing example databases are kept separate and cannot serve bookings in live mode. A clean installation creates only your administrator account and the role catalogue. Create actual companies in Admin, approve them, add vehicles/routes/drivers, then schedule trips. Passengers register with their own details.
+
+With MySQL running, open PowerShell in your project folder:
+
+```powershell
+cd C:\Users\Given\UniGo
+$securePassword = Read-Host "Choose your administrator password" -AsSecureString
+$env:UNIGO_ADMIN_PASSWORD = (New-Object System.Net.NetworkCredential('', $securePassword)).Password
+C:\xampp\php\php.exe scripts\install-live.php --database=unigo_live --email=YOUR_REAL_EMAIL --name=YOUR_NAME
+Remove-Item Env:UNIGO_ADMIN_PASSWORD
+```
+
+Replace the email/name placeholders. The installer refuses an existing target database or `.env` file and preserves the old database. It writes a private, git-ignored `.env` with the new connection. If `unigo_live` already exists, choose a new database name. If you already have `.env`, preserve it and configure a separate installation rather than overwriting it. No public/default administrator password is created.
+
+Keep MySQL running and launch this copy from its own folder:
+
+```powershell
+C:\xampp\php\php.exe -S 127.0.0.1:8000 -t public scripts\router.php
+```
+
+Open `http://127.0.0.1:8000`, sign in with your new administrator account, and set real support contact details and your local emergency number in Admin Settings. To make it accessible publicly, configure a PHP host with HTTPS, a restricted database user, backups and `public/` as the document root. The local PHP development server is for your laptop.
+
+Checkout currently offers **cash**. A booking reserves the seat as unpaid; authorized company staff or the assigned driver records the fare after actually receiving it. That creates a receipt and updates collected revenue. Cancellation releases the seat, but does not claim cash was returned: staff records the cash refund after returning it. Duplicate collection/refunds and unauthorized actors are rejected. Online mobile money/card checkout, stored wallet balances, SMS, USSD and email recovery remain unavailable until those providers are connected; no successful result is fabricated.
+
+Tracking displays only real GPS reports from the driver for the matching trip within the last five minutes. No recent report means no vehicle marker. Driver location sharing requires HTTPS or localhost and location permission. Emergency alerts enter staff workspaces; they do not automatically contact police or ambulances.
+
 ## Run with XAMPP on Windows
 
 1. Copy or clone this repository into `C:\xampp\htdocs\unigo`.
@@ -35,7 +63,7 @@ Open `http://127.0.0.1:8000`. This is a development server. Register your own ac
 
 ## Configuration
 
-`config/config.php` reads real environment variables. `.env.example` lists supported names, but copying it to `.env` does not load variables automatically. Configure them in your shell or web server. Defaults are database `unigo_db`, user `root`, no password, port `3306`.
+`config/config.php` reads real environment variables. `.env.example` lists supported names, and a git-ignored `.env` file is loaded automatically. Variables already set in the shell or web server take precedence. Defaults are database `unigo_db`, user `root`, no password, port `3306`.
 
 The public document root is `public/`. Keep configuration, source, database scripts, and storage outside the web document root in production.
 

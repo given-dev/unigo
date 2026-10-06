@@ -106,6 +106,7 @@ final class TrackingController extends Controller
         $vehicleId = (int) ($trip['vehicle_id'] ?? 0);
         $positions = $this->safe(static fn () => \App\Services\GpsService::latestPositions([$vehicleId], 1), []);
         foreach ($positions as $pos) {
+            if (!is_demo_mode() && (strtotime((string) $pos['recorded_at']) < time() - 300 || (int) ($pos['trip_id'] ?? 0) !== (int) $trip['id'])) continue;
             if ($vehicleId > 0 && (int) $pos['vehicle_id'] !== $vehicleId) {
                 continue;
             }

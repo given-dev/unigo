@@ -121,3 +121,14 @@ try {
 }
 
 unset($__request);
+
+// Prevent an old example database from silently becoming an operational one.
+if (!Request::isCli() && !Config::get('domain.demo_mode', false)
+    && Database::instance()->exists("SELECT 1 FROM users u JOIN user_roles ur ON ur.user_id=u.id JOIN roles r ON r.id=ur.role_id WHERE u.email='admin@unigo.test' AND r.slug='admin' LIMIT 1")) {
+    http_response_code(503);
+    \App\Core\View::render('errors/error', [
+        'title'=>'Setup in progress', 'code'=>503, 'heading'=>'Service setup in progress',
+        'message'=>'The site administrator needs to finish configuring this installation before bookings are available.',
+    ], 'layouts/public');
+    exit;
+}

@@ -93,6 +93,7 @@ document.addEventListener('DOMContentLoaded',function(){
 <?php foreach ($rows as $row): ?>
 <tr><?php foreach ($columns as $column): ?><td><?= e($row[$column] ?? '—') ?></td><?php endforeach; ?><td>
 <?php if ($resource === 'trips'): ?><a class="btn btn--ghost btn--sm" href="<?= e(url($path . '?trip=' . (int)$row['id'])) ?>">Passenger list</a><?php endif; ?>
+
 <?php $options=$transitions[$resource][$row['status'] ?? ''] ?? $statuses;
 if ($resource === 'deliveries' && ($row['status'] ?? '') === 'created') $options = ['cancelled'];
 $editable=in_array($role,['admin','operator'],true) || ($role === 'authority' && in_array($resource,['operators','complaints','emergencies'],true)) || ($role === 'driver' && in_array($resource,['trips','deliveries'],true)); ?>

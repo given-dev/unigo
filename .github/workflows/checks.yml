@@ -45,6 +45,7 @@ jobs:
         run: |
           php tests/booking.php
           php tests/system.php
+          php tests/live.php
       - name: Seat selection regression
         run: |
           npm install --prefix "$RUNNER_TEMP/unigo-tests" jsdom
@@ -82,3 +83,5 @@ jobs:
           server_pid=$!
           trap 'kill "$server_pid"' EXIT
           python tests/operational_journey.py http://127.0.0.1:8001
+      - name: Private live installer
+        run: python tests/install_live.py

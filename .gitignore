@@ -16,8 +16,7 @@ public/uploads/*
 !public/uploads/avatars/.gitkeep
 !public/uploads/operators/.gitkeep
 
-# Local environment overrides. Note: config/config.php reads real environment
-# variables via getenv(), so .env files are not parsed by the application.
+# Local environment overrides and secrets.
 .env
 .env.*
 !.env.example

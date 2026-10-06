@@ -93,7 +93,7 @@ final class GpsService
     {
         if ($vehicleIds === []) return [];
         $limit = max(1, min(500, $limit));
-        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0';
+        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0 AND recorded_at >= (NOW() - INTERVAL 5 MINUTE)';
         $sql = "SELECT v.id AS vehicle_id, v.registration_number, v.vehicle_type, v.status,
                        vl.latitude, vl.longitude, vl.speed, vl.heading, vl.recorded_at,
                        vl.source, vl.is_simulated, vl.trip_id,
@@ -120,7 +120,7 @@ final class GpsService
 
     public static function latestForVehicle(int $vehicleId): ?array
     {
-        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0';
+        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0 AND recorded_at >= (NOW() - INTERVAL 5 MINUTE)';
         return Database::instance()->first(
             "SELECT * FROM vehicle_locations WHERE vehicle_id = ? $realOnly ORDER BY recorded_at DESC, id DESC LIMIT 1",
             [$vehicleId]
@@ -134,7 +134,7 @@ final class GpsService
      */
     public static function trail(int $vehicleId, int $minutes = 60, int $limit = 200): array
     {
-        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0';
+        $realOnly = is_demo_mode() ? '' : ' AND is_simulated = 0 AND recorded_at >= (NOW() - INTERVAL 5 MINUTE)';
         $minutes = max(1, min(1440, $minutes));
         $limit = max(1, min(1000, $limit));
         return Database::instance()->select(

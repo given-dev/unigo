@@ -2,8 +2,9 @@
 /** Initialize an empty database. Never import the destructive schema over data. */
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
-$config = require dirname(__DIR__) . '/config/config.php';
-$cfg = $config['database'];
+require dirname(__DIR__) . '/src/core/Config.php';
+App\Core\Config::load(dirname(__DIR__) . '/config/config.php');
+$cfg = App\Core\Config::get('database');
 $name = (string) $cfg['name'];
 if (!preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', $name)) throw new RuntimeException('Choose a valid database name.');
 $pdo = new PDO(sprintf('mysql:host=%s;port=%d;charset=utf8mb4', $cfg['host'], $cfg['port']), $cfg['user'], $cfg['pass'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
