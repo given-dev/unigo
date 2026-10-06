@@ -7,3 +7,28 @@ body{background:#f7f9f8}.public-page{font-size:15px}.public-page #main{max-width
 .landing-search .field,.landing-search .input,.landing-search .select,.search-panel__grid>*{min-width:0}
 @media(min-width:960px) and (max-width:1399px){.search-panel__grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
 @media(min-width:1400px){.search-panel__grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,.8fr) minmax(0,1fr) auto!important}}
+
+/* Clear public contrast and a useful installation state. */
+.public-page .site-footer{background:#123c31;color:#d4e8df;padding:48px 28px 30px}
+.public-page .site-footer .footer-title{color:#fff}
+.public-page .site-footer a{color:#d4e8df}
+.public-page .site-footer a:hover{color:#fff;text-decoration:underline}
+.public-page .site-footer .text-xs{color:#b9d2c6}
+.setup-status{font-size:12px;font-weight:700;color:#156b58;background:#e3f1e9;border:1px solid #c8e2d4;border-radius:24px;padding:8px 14px}
+.setup-page{display:grid;grid-template-columns:1.1fr 1fr;gap:64px;align-items:center;min-height:calc(100vh - 150px);padding:64px 0}
+.setup-intro h1{font-size:clamp(38px,4.5vw,62px);line-height:1.1;letter-spacing:-2px;color:#162a23;margin:20px 0 24px}
+.setup-intro h1 span{color:var(--primary)}
+.setup-intro>p{font-size:17px;line-height:1.8;color:#51675c;max-width:490px}
+.setup-notice{display:flex;align-items:flex-start;gap:12px;background:#e7f2eb;border:1px solid #cfdfd5;border-radius:14px;padding:18px;font-size:13px;line-height:1.7;color:#315744;margin-top:28px}
+.setup-notice .icon{flex-shrink:0;margin-top:3px}
+.setup-card{background:#fff;border:1px solid #dae7df;border-radius:24px;padding:36px;box-shadow:0 20px 60px #173e2910}
+.setup-card h2{font-size:24px;letter-spacing:-.6px;color:#183d2c;margin:12px 0 28px}
+.setup-checklist{list-style:none;padding:0;margin:0 0 28px;display:grid;gap:24px}
+.setup-checklist li{display:flex;gap:16px}
+.setup-checklist li>span{flex:0 0 36px;height:36px;display:grid;place-items:center;background:#ecf5ef;border-radius:10px;color:#156b58;font-size:12px;font-weight:700}
+.setup-checklist h3{font-size:15px;color:#203b2e;margin:0 0 6px}
+.setup-checklist p,.setup-help{font-size:13px;line-height:1.7;color:#5b7064;margin:0}
+.setup-help{margin-top:18px}
+.public-page .landing-hero__copy .btn--light{background:#fff;border:1px solid #c6dace;color:#164e3a}
+.public-page .landing-hero{background:radial-gradient(ellipse at 85% 35%,#e5f1e9 0,transparent 60%)}
+@media(max-width:760px){.setup-page{grid-template-columns:1fr;gap:28px;padding:40px 0;min-height:auto}.setup-card{padding:24px}.setup-intro h1{letter-spacing:-1.3px}.public-page .site-footer{padding:36px 24px}.setup-status{white-space:nowrap}}

@@ -43,6 +43,7 @@ $links   = [
         </span>
     </a>
 
+    <?php if (empty($setupPending)): ?>
     <nav class="topbar__actions only-desktop items-center gap-1">
         <?php foreach ($links as $link): ?>
             <a class="btn btn--ghost btn--sm<?= nav_active($link[0], $current) ?>" href="<?= e(url($link[0])) ?>"><?= e($link[1]) ?></a>
@@ -59,6 +60,7 @@ $links   = [
             <a class="btn btn--primary btn--sm" href="<?= e(url('/register')) ?>">Create account</a>
         <?php endif; ?>
     </div>
+    <?php else: ?><span class="setup-status">Setup required</span><?php endif; ?>
 </header>
 
 <main id="main">
@@ -66,6 +68,7 @@ $links   = [
     <?= $content ?>
 </main>
 
+<?php if (empty($setupPending)): ?>
 <footer class="site-footer">
     <div class="footer-grid">
         <div>
@@ -106,6 +109,7 @@ $links   = [
         &copy; <?= date('Y') ?> <?= e(app_name()) ?>. Travel and fleet management.
     </p>
 </footer>
+<?php endif; ?>
 
 <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
