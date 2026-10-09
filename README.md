@@ -101,6 +101,17 @@ All seeded accounts use password `UniGo@2026`:
 | Driver | driver@unigo.test |
 | Authority | authority@unigo.test |
 
+### Test companies
+
+`database/seed-test-companies.php` adds three small, self-contained companies - one bus, one taxi and one logistics truck - each with an operator, driver, passenger/customer and authority account, one vehicle, one route with stops, a scheduled trip and a cash booking (bus, taxi) or parcel (logistics), so every role has real data to verify:
+
+```bat
+C:\xampp\php\php.exe database\seed-test-companies.php          :: insert
+C:\xampp\php\php.exe database\seed-test-companies.php --fresh  :: replace existing rows
+```
+
+It only runs with `UNIGO_DEMO_MODE=1` on a disposable database (the accounts use the reserved `@unigo.test` domain). Routes depart 10 October 2026, cash bookings start unpaid until staff record the fare, and every account shares the password `UniGo@2026`.
+
 ## Landing page and booking
 
 The homepage shows approved travel companies from the database, active routes, and a search form for departure, destination, travel date, and company. Guests can browse available trips. Selecting a seat requires sign-in; login or registration returns the user to their selected trip. Company links show upcoming departures over the next 30 days when no date is chosen. Date searches use the selected day. Route matching respects direction and intermediate-stop order.
