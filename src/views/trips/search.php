@@ -35,7 +35,7 @@ $filters   = $filters ?? [];
             <div class="search-field">
                 <i class="icon search-field__icon" data-icon="bus">bus</i>
                 <select class="select" name="transport_type" aria-label="Transport type">
-                    <option value="">Any transport</option>
+                    <option value="">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Any transport</option>
                     <option value="bus" <?= ($filters['transport_type'] ?? '') === 'bus' ? 'selected' : '' ?>>Bus</option>
                     <option value="electric_bus" <?= ($filters['transport_type'] ?? '') === 'electric_bus' ? 'selected' : '' ?>>Electric bus</option>
                     <option value="taxi" <?= ($filters['transport_type'] ?? '') === 'taxi' ? 'selected' : '' ?>>Taxi</option>
