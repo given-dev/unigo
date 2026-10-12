@@ -386,12 +386,10 @@ Update the files, then apply any migration the update adds. The current one is:
 
 ```bat
 C:\xampp\php\php.exe scripts\migrate-vehicle-images.php
+C:\xampp\php\php.exe scripts\migrate-authorities.php
 ```
 
-It adds the `vehicle_images` table used by vehicle photo uploads and is safe to
-re-run. An update does not require re-importing the database or re-running the
-demo seeder. Never import `database/schema.sql` into a database holding data you
-want to keep.
+These scripts add the `vehicle_images` table for vehicle photos and the `authorities` table for national and district officer profiles. Both are safe to re-run and preserve existing records. An update does not require reimporting the database or rerunning the demo seeder. Do not reimport `schema.sql` into a database containing data you want to keep.
 
 ---
 
@@ -423,6 +421,8 @@ python tests/http_smoke.py http://127.0.0.1:8000
 python tests/journey.py http://127.0.0.1:8000
 python tests/authentication.py http://127.0.0.1:8000
 python tests/workflows.py http://127.0.0.1:8000
+php database/seed-test-companies.php
+python tests/authority.py http://127.0.0.1:8000
 ```
 
 - `tests/booking.php` — passenger-profile creation, paid checkout, duplicate

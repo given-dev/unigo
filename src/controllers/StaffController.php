@@ -541,6 +541,9 @@ final class StaffController extends Controller
                 throw new ValidationException('Choose a route or enter a location.');
             }
             $route = $routeId ? $db->first('SELECT * FROM routes WHERE id = ?', [$routeId]) : null;
+            if ($routeId !== null && $route === null) {
+                throw new ValidationException('Choose an existing route.');
+            }
             if ($route !== null && !$inDistrict($route)) {
                 throw new AuthorizationException('This route is outside your district.');
             }

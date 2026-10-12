@@ -71,6 +71,8 @@ jobs:
           python tests/journey.py
           python tests/authentication.py
           python tests/workflows.py
+          php database/seed-test-companies.php
+          python tests/authority.py
       - name: Real cash operations
         env:
           UNIGO_DEMO_MODE: '0'
