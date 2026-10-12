@@ -71,7 +71,7 @@ jobs:
           python tests/journey.py
           python tests/authentication.py
           python tests/workflows.py
-          php database/seed-test-companies.php
+          php database/seed-test-companies.php --fresh
           python tests/authority.py
       - name: Real cash operations
         env:
