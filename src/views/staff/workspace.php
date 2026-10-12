@@ -2,6 +2,9 @@
 declare(strict_types=1);
 use App\Core\{Csrf, View};
 $path = '/' . $role . '/' . $resource;
+$analytics = $analytics ?? [];
+$traffic = $traffic ?? [];
+$summary = $summary ?? [];
 $transitions = [
     'trips'=>['scheduled'=>['boarding','cancelled'],'boarding'=>['in_transit','scheduled','cancelled'],'in_transit'=>['completed','cancelled']],
     'deliveries'=>\App\Models\DeliveryModel::STATUS_FLOW,
@@ -47,6 +50,15 @@ $fields = match ($resource) {
 </div><button class="btn btn--primary mt-3" type="submit">Create</button></form></details>
 <?php endif; ?>
 
+<?php if ($board): ?>
+<div class="stat-grid mb-4">
+    <?= View::partial('partials/stat-card', ['label' => 'Trips today', 'value' => (string) $board['today'], 'icon' => 'bus', 'tone' => 'primary']) ?>
+    <?= View::partial('partials/stat-card', ['label' => 'Boarding now', 'value' => (string) $board['boarding'], 'icon' => 'navigation', 'tone' => 'info']) ?>
+    <?= View::partial('partials/stat-card', ['label' => 'Fares taken today', 'value' => money($board['collected']), 'icon' => 'coins', 'tone' => 'success']) ?>
+    <?= View::partial('partials/stat-card', ['label' => 'Cash today', 'value' => money($board['cash']), 'icon' => 'wallet', 'tone' => 'warning']) ?>
+</div>
+<?php endif; ?>
+
 <?php if ($map !== null): ?>
 <div class="card mb-4"><div id="staffMap" class="map" data-map='<?= e((string)json_encode($map)) ?>' style="min-height:420px"></div></div>
 <a class="btn btn--secondary mb-3" href="<?= e(url($path)) ?>">Refresh positions</a>
@@ -69,6 +81,14 @@ document.addEventListener('DOMContentLoaded',function(){
 });</script><?php View::stop(); ?>
 <?php endif; ?>
 
+<?php if ($analytics): ?>
+<?= View::partial('staff/analytics', ['analytics' => $analytics]) ?>
+<?php endif; ?>
+
+<?php if ($traffic): ?>
+<?= View::partial('staff/traffic', ['traffic' => $traffic, 'choices' => $choices, 'path' => $path]) ?>
+<?php endif; ?>
+
 <?php if ($report): ?>
 <div class="grid grid-3 gap-3 mb-4">
 <?= View::partial('partials/stat-card',['label'=>'Bookings','value'=>(string)$report['bookings'],'icon'=>'ticket']) ?>
@@ -76,6 +96,10 @@ document.addEventListener('DOMContentLoaded',function(){
 </div><div class="card"><div class="card__body"><h3>Trip activity</h3><?php foreach ($report['trips'] as $item): ?><p><?= e(ucwords(str_replace('_',' ',$item['status']))) ?>: <strong><?= (int)$item['total'] ?></strong></p><?php endforeach; ?>
 <?php if (!$report['trips']): ?><p>No trips recorded yet.</p><?php endif; ?>
 <p class="text-sm text-muted-2">Collected fares include paid bookings. Driver figures show fares on assigned trips; they are not payout statements.</p></div></div>
+<?php endif; ?>
+
+<?php if ($summary): ?>
+<?= View::partial('staff/rollup', ['summary' => $summary]) ?>
 <?php endif; ?>
 
 <?php if ($resource === 'settings'): ?>
@@ -131,7 +155,24 @@ $editable=in_array($role,['admin','operator'],true) || ($role === 'authority' &&
 <?php endif; ?>
 
 <?php if ($manifest): ?>
-<div class="card mt-4" style="overflow-x:auto"><div class="card__body"><h3>Passenger list</h3><table class="table"><thead><tr><th>Reference</th><th>Passenger</th><th>Seat</th><th>Phone</th><th>Status</th><th>Boarding</th></tr></thead><tbody>
-<?php foreach ($manifest as $booking): ?><tr><td><?= e($booking['reference']) ?></td><td><?= e($booking['first_name'].' '.$booking['last_name']) ?></td><td><?= e($booking['seat_number']) ?></td><td><?= e($booking['phone']) ?></td><td><?= e($booking['status']) ?></td><td><?php if ($role === 'driver' && $booking['status'] === 'confirmed'): ?><form method="post" action="<?= e(url('/driver/bookings')) ?>"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$booking['id'] ?>"><input type="hidden" name="action" value="board"><button class="btn btn--secondary btn--sm">Mark boarded</button></form><?php endif; ?></td></tr><?php endforeach; ?>
+<div class="card mt-4" style="overflow-x:auto"><div class="card__body"><h3>Passenger list</h3><table class="table"><thead><tr><th>Reference</th><th>Passenger</th><th>Seat</th><th>Phone</th><th>Status</th><th>Payment</th><th>Boarding</th></tr></thead><tbody>
+<?php foreach ($manifest as $booking): ?>
+<tr>
+    <td><?= e($booking['reference']) ?></td>
+    <td><?= e($booking['first_name'].' '.$booking['last_name']) ?></td>
+    <td><?= e($booking['seat_number']) ?></td>
+    <td><?= e($booking['phone']) ?></td>
+    <td><?= e($booking['status']) ?></td>
+    <td><?= $booking['payment_status'] === 'paid' ? '<span class="badge badge-success">Paid</span>' : '<span class="badge badge-warning">Cash</span>' ?></td>
+    <td class="flex gap-2">
+        <?php if (in_array($role, ['driver', 'operator'], true) && $booking['status'] === 'confirmed'): ?>
+        <form method="post" action="<?= e(url('/' . $role . '/bookings')) ?>"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$booking['id'] ?>"><input type="hidden" name="action" value="board"><button class="btn btn--secondary btn--sm">Mark boarded</button></form>
+        <?php endif; ?>
+        <?php if ($role === 'operator' && $booking['status'] === 'confirmed' && $booking['payment_status'] === 'unpaid'): ?>
+        <form method="post" action="<?= e(url('/operator/bookings')) ?>" data-confirm="Confirm you have received the full fare in cash?"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$booking['id'] ?>"><input type="hidden" name="action" value="collect_cash"><button class="btn btn--ghost btn--sm">Record cash fare</button></form>
+        <?php endif; ?>
+    </td>
+</tr>
+<?php endforeach; ?>
 </tbody></table></div></div>
 <?php endif; ?>

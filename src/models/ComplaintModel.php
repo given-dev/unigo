@@ -71,20 +71,20 @@ final class ComplaintModel extends BaseModel
                 'status'       => 'open',
             ]);
 
-            // Notify administrators.
-            $admins = $this->db->select(
-                "SELECT u.id FROM users u
+            // Notify administrators and the authority (regulator) workspace.
+            $staff = $this->db->select(
+                "SELECT u.id, r.slug AS role FROM users u
                  INNER JOIN user_roles ur ON ur.user_id = u.id
                  INNER JOIN roles r ON r.id = ur.role_id
-                 WHERE r.slug = 'admin' AND u.status = 'active' LIMIT 20"
+                 WHERE r.slug IN ('admin','authority') AND u.status = 'active' LIMIT 40"
             );
-            foreach ($admins as $admin) {
+            foreach ($staff as $member) {
                 NotificationService::push(
-                    (int) $admin['id'],
+                    (int) $member['id'],
                     'complaint',
                     'New complaint ' . $reference,
                     str_replace('_', ' ', $category) . ' reported by a user.',
-                    '/admin/complaints',
+                    $member['role'] === 'authority' ? '/authority/complaints' : '/admin/complaints',
                     'warning',
                     'flag'
                 );

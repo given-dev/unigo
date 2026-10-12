@@ -80,6 +80,49 @@ final class StatsModel extends BaseModel
         return $trips;
     }
 
+    /**
+     * Authority dashboard tiles. The national office (no district) sees the
+     * whole network; a district officer sees only routes that start or end in
+     * their district, plus incidents and complaints tied to those routes.
+     *
+     * @param string|null $district null = national office (whole network)
+     */
+    public function authorityHeadline(?string $district): array
+    {
+        $db = $this->db;
+        $routeFilter = '';
+        $pair = [];
+        if ($district !== null) {
+            $routeFilter = ' AND (r.origin_name = ? OR r.destination_name = ?)';
+            $pair = [$district, $district];
+        }
+        return [
+            'active_trips' => (int) $db->count(
+                "SELECT COUNT(*) FROM trips t INNER JOIN routes r ON r.id = t.route_id
+                 WHERE t.status IN ('boarding','in_transit') $routeFilter",
+                $pair
+            ),
+            'open_emergencies' => (int) $db->count(
+                "SELECT COUNT(DISTINCT ea.id) FROM emergency_alerts ea
+                 LEFT JOIN trips t ON t.id = ea.trip_id
+                 LEFT JOIN routes r ON r.id = t.route_id
+                 WHERE ea.status IN ('new','investigating','responding') $routeFilter",
+                $pair
+            ),
+            'open_complaints' => (int) $db->count(
+                "SELECT COUNT(DISTINCT c.id) FROM complaints c
+                 LEFT JOIN trips t ON t.id = c.trip_id
+                 LEFT JOIN routes r ON r.id = t.route_id
+                 WHERE c.status IN ('open','investigating') $routeFilter",
+                $pair
+            ),
+            'active_routes' => (int) $db->count(
+                "SELECT COUNT(*) FROM routes r WHERE r.status = 'active' $routeFilter",
+                $pair
+            ),
+        ];
+    }
+
     public function bookingsOverTime(int $days = 14): array
     {
         return $this->dailySeriesQuery('bookings', 'booked_at', [
@@ -96,27 +139,49 @@ final class StatsModel extends BaseModel
         ], $days);
     }
 
-    public function transportTypeMix(): array
+    /** Route predicate that scopes a query to a district officer's routes. */
+    private function districtRouteFilter(string $alias, ?string $district): array
     {
+        if ($district === null) {
+            return ['', []];
+        }
+        return ["AND ($alias.origin_name = ? OR $alias.destination_name = ?)", [$district, $district]];
+    }
+
+    public function transportTypeMix(?string $district = null): array
+    {
+        [$filter, $params] = $this->districtRouteFilter('r', $district);
         return $this->db->select(
             "SELECT v.vehicle_type AS label, COUNT(b.id) AS total
              FROM bookings b
              INNER JOIN vehicles v ON v.id = b.vehicle_id
-             WHERE b.booked_at >= (CURDATE() - INTERVAL 30 DAY)
+             INNER JOIN trips t ON t.id = b.trip_id
+             INNER JOIN routes r ON r.id = t.route_id
+             WHERE b.booked_at >= (CURDATE() - INTERVAL 30 DAY) $filter
              GROUP BY v.vehicle_type
-             ORDER BY total DESC"
+             ORDER BY total DESC",
+            $params
         );
     }
 
-    public function tripStatusMix(): array
+    public function tripStatusMix(?string $district = null): array
     {
-        return $this->db->select('SELECT status AS label, COUNT(*) AS total FROM trips GROUP BY status');
+        [$filter, $params] = $this->districtRouteFilter('r', $district);
+        $join = $district === null ? '' : 'INNER JOIN routes r ON r.id = t.route_id';
+        return $this->db->select(
+            "SELECT t.status AS label, COUNT(*) AS total
+             FROM trips t $join
+             WHERE 1=1 $filter
+             GROUP BY t.status",
+            $params
+        );
     }
 
     /** Top routes by revenue - used by the authority + admin dashboards. */
-    public function topRoutes(int $limit = 8): array
+    public function topRoutes(int $limit = 8, ?string $district = null): array
     {
         $limit = max(1, min(30, $limit));
+        [$filter, $params] = $this->districtRouteFilter('r', $district);
         return $this->db->select(
             "SELECT r.id, r.name, r.route_code,
                     COUNT(b.id) AS bookings,
@@ -124,30 +189,47 @@ final class StatsModel extends BaseModel
              FROM routes r
              LEFT JOIN trips t ON t.route_id = r.id
              LEFT JOIN bookings b ON b.trip_id = t.id AND b.booked_at >= (CURDATE() - INTERVAL 30 DAY)
+             WHERE 1=1 $filter
              GROUP BY r.id
              ORDER BY revenue DESC, bookings DESC
-             LIMIT $limit"
+             LIMIT $limit",
+            $params
         );
     }
 
-    public function topDrivers(int $limit = 8): array
+    public function topDrivers(int $limit = 8, ?string $district = null): array
     {
         $limit = max(1, min(30, $limit));
+        $where = 'd.total_trips > 0';
+        $params = [];
+        if ($district !== null) {
+            $where .= " AND EXISTS (SELECT 1 FROM trips t INNER JOIN routes r ON r.id = t.route_id
+                                    WHERE t.driver_id = d.id AND (r.origin_name = ? OR r.destination_name = ?))";
+            $params = [$district, $district];
+        }
         return $this->db->select(
-            'SELECT d.id, u.first_name, u.last_name, d.rating_avg, d.rating_count,
+            "SELECT d.id, u.first_name, u.last_name, d.rating_avg, d.rating_count,
                     d.total_trips, o.company_name
              FROM drivers d
              INNER JOIN users u ON u.id = d.user_id
              LEFT JOIN operators o ON o.id = d.operator_id
-             WHERE d.total_trips > 0
+             WHERE $where
              ORDER BY d.total_trips DESC, d.rating_avg DESC
-             LIMIT ' . $limit
+             LIMIT $limit",
+            $params
         );
     }
 
-    public function operatorPerformance(int $limit = 10): array
+    public function operatorPerformance(int $limit = 10, ?string $district = null): array
     {
         $limit = max(1, min(30, $limit));
+        $where = "o.approval_status = 'approved'";
+        $params = [];
+        if ($district !== null) {
+            $where .= " AND EXISTS (SELECT 1 FROM routes r WHERE r.operator_id = o.id
+                                    AND (r.origin_name = ? OR r.destination_name = ?))";
+            $params = [$district, $district];
+        }
         return $this->db->select(
             "SELECT o.id, o.company_name, o.rating_avg,
                     (SELECT COUNT(*) FROM vehicles v WHERE v.operator_id = o.id) AS vehicles,
@@ -157,10 +239,42 @@ final class StatsModel extends BaseModel
              FROM operators o
              LEFT JOIN trips t ON t.operator_id = o.id
              LEFT JOIN bookings b ON b.trip_id = t.id AND b.booked_at >= (CURDATE() - INTERVAL 30 DAY)
-             WHERE o.approval_status = 'approved'
+             WHERE $where
              GROUP BY o.id
              ORDER BY revenue DESC
-             LIMIT $limit"
+             LIMIT $limit",
+            $params
+        );
+    }
+
+    /**
+     * Fare revenue & tariff compliance per route.
+     *
+     * A regulator cares about the approved tariff (routes.base_fare) versus the
+     * fare operators actually charge (trips.fare) and what was actually
+     * collected (paid bookings), plus overcharging complaints.
+     */
+    public function fareByRoute(int $limit = 10, ?string $district = null): array
+    {
+        $limit = max(1, min(50, $limit));
+        [$filter, $params] = $this->districtRouteFilter('r', $district);
+        return $this->db->select(
+            "SELECT r.id, r.name, r.route_code,
+                    r.base_fare AS approved_fare,
+                    COALESCE(AVG(NULLIF(t.fare,0)), 0) AS avg_charged_fare,
+                    COALESCE(SUM(CASE WHEN b.payment_status = 'paid' AND b.status IN ('confirmed','completed') THEN b.fare ELSE 0 END),0) AS collected,
+                    COUNT(b.id) AS bookings,
+                    (SELECT COUNT(*) FROM complaints c
+                     WHERE c.category = 'overcharging'
+                       AND c.trip_id IN (SELECT t2.id FROM trips t2 WHERE t2.route_id = r.id)) AS overcharge_complaints
+             FROM routes r
+             LEFT JOIN trips t ON t.route_id = r.id
+             LEFT JOIN bookings b ON b.trip_id = t.id AND b.booked_at >= (CURDATE() - INTERVAL 30 DAY)
+             WHERE r.status = 'active' $filter
+             GROUP BY r.id
+             ORDER BY collected DESC, bookings DESC
+             LIMIT $limit",
+            $params
         );
     }
 
@@ -168,22 +282,35 @@ final class StatsModel extends BaseModel
     // Authority view
     // ------------------------------------------------------------------
 
-    public function trafficSnapshot(int $limit = 20): array
+    public function trafficSnapshot(int $limit = 20, ?string $district = null): array
     {
         $limit = max(1, min(100, $limit));
+        $where = "t.status <> 'cleared'";
+        $params = [];
+        if ($district !== null) {
+            $where .= " AND (r.origin_name = ? OR r.destination_name = ?)";
+            $params = [$district, $district];
+        }
         return $this->db->select(
             "SELECT t.*, r.name AS route_name, r.route_code
              FROM traffic_reports t
              LEFT JOIN routes r ON r.id = t.route_id
-             WHERE t.status <> 'cleared'
+             WHERE $where
              ORDER BY FIELD(t.severity,'critical','high','medium','low'), t.created_at DESC
-             LIMIT $limit"
+             LIMIT $limit",
+            $params
         );
     }
 
-    public function congestionByRoute(int $limit = 10): array
+    public function congestionByRoute(int $limit = 10, ?string $district = null): array
     {
         $limit = max(1, min(50, $limit));
+        $where = "t.status <> 'cleared'";
+        $params = [];
+        if ($district !== null) {
+            $where .= " AND (r.origin_name = ? OR r.destination_name = ?)";
+            $params = [$district, $district];
+        }
         return $this->db->select(
             "SELECT COALESCE(r.name, 'Unassigned') AS label,
                     COUNT(t.id) AS total,
@@ -191,23 +318,26 @@ final class StatsModel extends BaseModel
                     COALESCE(SUM(t.severity = 'critical'),0) AS critical_count
              FROM traffic_reports t
              LEFT JOIN routes r ON r.id = t.route_id
-             WHERE t.status <> 'cleared'
+             WHERE $where
              GROUP BY t.route_id
              ORDER BY critical_count DESC, avg_delay DESC
-             LIMIT $limit"
+             LIMIT $limit",
+            $params
         );
     }
 
     /** District level trip/passenger distribution (simple geographic rollup). */
-    public function tripsByArea(int $limit = 12): array
+    public function tripsByArea(int $limit = 12, ?string $district = null): array
     {
         $limit = max(1, min(50, $limit));
+        [$filter, $params] = $this->districtRouteFilter('r', $district);
         return $this->db->select(
             "SELECT COALESCE(r.origin_name, 'Unknown') AS label, COUNT(*) AS total
              FROM trips t INNER JOIN routes r ON r.id = t.route_id
-             WHERE t.departure_time >= (CURDATE() - INTERVAL 30 DAY)
+             WHERE t.departure_time >= (CURDATE() - INTERVAL 30 DAY) $filter
              GROUP BY r.origin_name
-             ORDER BY total DESC LIMIT $limit"
+             ORDER BY total DESC LIMIT $limit",
+            $params
         );
     }
 

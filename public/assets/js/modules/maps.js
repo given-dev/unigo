@@ -58,6 +58,7 @@
 
     function vehiclePopup(v) {
         return '<div class="map-popup__title">' + escapeHtml(v.label || 'Vehicle') + '</div>' +
+            (v.route ? '<div class="map-popup__row"><span>Route</span><span>' + escapeHtml(v.route) + '</span></div>' : '') +
             '<div class="map-popup__row"><span>Status</span><span>' + escapeHtml(v.status || '-') + '</span></div>' +
             (v.speed !== undefined && v.speed !== null ? '<div class="map-popup__row"><span>Speed</span><span>' + escapeHtml(v.speed) + ' km/h</span></div>' : '') +
             (v.eta ? '<div class="map-popup__row"><span>ETA</span><span>' + escapeHtml(v.eta) + '</span></div>' : '') +
@@ -108,6 +109,8 @@
         map.on('click', function () { map.scrollWheelZoom.enable(); });
         map.on('mouseout', function () { map.scrollWheelZoom.disable(); });
 
+        var routeLayers = [];
+
         if (options.route && options.route.length > 1) {
             var line = window.L.polyline(options.route, {
                 color: cssVar('--primary', '#2563EB'),
@@ -116,7 +119,28 @@
                 dashArray: options.dashed ? '8 8' : null,
                 lineJoin: 'round'
             }).addTo(map);
+            routeLayers.push(line);
             if (options.fit !== false) map.fitBounds(line.getBounds(), { padding: [30, 30] });
+        }
+
+        // Multiple route polylines (network map): [{ points: [[lat,lng],...], color, label }]
+        (options.routes || []).forEach(function (r) {
+            if (!r || !r.points || r.points.length < 2) return;
+            var layer = window.L.polyline(r.points, {
+                color: r.color || cssVar('--primary', '#2563EB'),
+                weight: r.weight || 3,
+                opacity: r.opacity == null ? .7 : r.opacity,
+                dashArray: r.dashed ? '6 8' : null,
+                lineJoin: 'round'
+            }).addTo(map);
+            if (r.label) layer.bindPopup('<b>' + escapeHtml(r.label) + '</b>');
+            routeLayers.push(layer);
+        });
+
+        if (!options.route && routeLayers.length && options.fit !== false) {
+            var bounds = routeLayers[0].getBounds();
+            routeLayers.forEach(function (layer) { bounds.extend(layer.getBounds()); });
+            map.fitBounds(bounds, { padding: [30, 30] });
         }
 
         (options.markers || []).forEach(function (m) {

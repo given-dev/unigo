@@ -468,6 +468,28 @@ final class Auth
         return self::profileId('passengers');
     }
 
+    public static function authorityId(): ?int
+    {
+        return self::profileId('authorities');
+    }
+
+    /**
+     * The district a regulator officer covers, or null for the national office.
+     *
+     * A blank/missing district means the officer sees the whole network; a
+     * district officer is scoped to routes that start or end in that district.
+     */
+    public static function authorityDistrict(): ?string
+    {
+        $id = self::authorityId();
+        if ($id === null) {
+            return null;
+        }
+        $district = Database::instance()->value('SELECT district FROM authorities WHERE id = ?', [$id]);
+        $district = $district === null ? '' : trim((string) $district);
+        return $district === '' ? null : $district;
+    }
+
     // ------------------------------------------------------------------
     // Guards
     // ------------------------------------------------------------------

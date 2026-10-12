@@ -4,8 +4,8 @@ declare(strict_types=1);
 namespace App\Controllers;
 
 use App\Core\{Auth, ActivityLog, Database, Flash, Paginator, Request, ValidationException, AuthorizationException, NotFoundException};
-use App\Models\{TripModel, BookingModel, DeliveryModel, ComplaintModel, EmergencyModel, UserModel, VehicleModel};
-use App\Services\{GpsService, SettingsService};
+use App\Models\{TripModel, BookingModel, DeliveryModel, ComplaintModel, EmergencyModel, UserModel, VehicleModel, StatsModel, TrafficModel};
+use App\Services\{GpsService, SettingsService, RouteAdvisor};
 
 /** Staff records are explicitly scoped before any read or mutation. */
 final class StaffController extends Controller
@@ -41,7 +41,8 @@ final class StaffController extends Controller
     /** Returns SQL written only from our resource and role allowlists. */
     private function scope(string $role, string $resource): array
     {
-        if ($role === 'admin' || $role === 'authority') return ['1', []];
+        if ($role === 'admin') return ['1', []];
+        if ($role === 'authority') return $this->authorityScope($resource);
         if ($role === 'operator') {
             $id = Auth::operatorId();
             if (!$id) throw new AuthorizationException('An operator profile is required.');
@@ -61,39 +62,167 @@ final class StaffController extends Controller
         };
     }
 
+    /**
+     * A regulator (authority) with no district is the national office and sees
+     * everything. A district officer only sees routes that start or end in
+     * their district, plus the operators, trips, vehicles and reports tied to
+     * those routes.
+     */
+    private function authorityScope(string $resource): array
+    {
+        $district = Auth::authorityDistrict();
+        if ($district === null) {
+            return ['1', []];
+        }
+        $routeIds = '(SELECT id FROM routes WHERE origin_name = ? OR destination_name = ?)';
+        $pair = [$district, $district];
+        return match ($resource) {
+            'routes'    => ['(origin_name = ? OR destination_name = ?)', $pair],
+            'operators' => ["id IN (SELECT operator_id FROM routes WHERE operator_id IS NOT NULL AND (origin_name = ? OR destination_name = ?))", $pair],
+            'trips'     => ["route_id IN $routeIds", $pair],
+            'vehicles'  => ["(home_route_id IN $routeIds OR id IN (SELECT vehicle_id FROM trips WHERE route_id IN $routeIds))", array_merge($pair, $pair)],
+            'drivers'   => ["id IN (SELECT driver_id FROM trips WHERE route_id IN $routeIds AND driver_id IS NOT NULL)", $pair],
+            'bookings', 'complaints', 'emergencies', 'sos', 'deliveries', 'ratings'
+                        => ["trip_id IN (SELECT id FROM trips WHERE route_id IN $routeIds)", $pair],
+            default     => ['1', []],
+        };
+    }
+
     public function index(): void
     {
         [$role, $resource, $entry] = $this->workspace();
         $db = Database::instance();
-        $rows = []; $columns = []; $paginator = null; $map = null; $report = []; $photos = [];
-        if (isset(self::RESOURCES[$resource])) {
-            [$table, $select] = self::RESOURCES[$resource];
-            [$where, $params] = $this->scope($role, $resource);
+        $rows = []; $columns = []; $paginator = null; $map = null; $report = []; $photos = []; $analytics = []; $traffic = []; $summary = []; $choices = []; $board = [];
+        $national = $role === 'authority' && Auth::authorityDistrict() === null;
+        if ($resource === 'trips' && in_array($role, ['operator', 'admin'], true)) {
+            [$where, $params] = $this->scope($role, 'trips');
+            $where = str_replace('operator_id', 't.operator_id', $where);
             $term = $this->request->str('search');
             if ($term !== '') {
-                $conditions = [];
-                foreach (explode(',', $select) as $column) { $conditions[] = "CAST(`$column` AS CHAR) LIKE ?"; $params[] = '%' . $term . '%'; }
-                $where = '(' . $where . ')';
-                $where .= ' AND (' . implode(' OR ', $conditions) . ')';
+                $like = '%' . $term . '%';
+                $where = "($where) AND (t.trip_code LIKE ? OR r.name LIKE ? OR v.registration_number LIKE ? OR CONCAT(COALESCE(du.first_name,''),' ',COALESCE(du.last_name,'')) LIKE ?)";
+                array_push($params, $like, $like, $like, $like);
             }
-            $total = $db->count("SELECT COUNT(*) FROM `$table` WHERE $where", $params);
+            $joins = 'trips t INNER JOIN routes r ON r.id = t.route_id INNER JOIN vehicles v ON v.id = t.vehicle_id LEFT JOIN drivers d ON d.id = t.driver_id LEFT JOIN users du ON du.id = d.user_id';
+            $total = $db->count("SELECT COUNT(*) FROM $joins WHERE $where", $params);
             $paginator = new Paginator($total, $this->request->int('page', 1), 20);
-            $rows = $db->select("SELECT $select FROM `$table` WHERE $where ORDER BY id DESC LIMIT " . $paginator->limit() . ' OFFSET ' . $paginator->offset(), $params);
-            $columns = explode(',', $select);
-            if ($resource === 'vehicles' && $rows) {
-                $photos = (new VehicleModel())->photosFor(array_map(static fn (array $r): int => (int) $r['id'], $rows));
+            $rows = array_map(
+                static function (array $r): array {
+                    $r['departure_time'] = date('M j · H:i', strtotime((string) $r['departure_time']));
+                    $r['seats_booked'] = (int) $r['seats_booked'] . ' / ' . (int) $r['seats_total'];
+                    $r['fare'] = money((float) $r['fare']);
+                    return $r;
+                },
+                $db->select(
+                    "SELECT t.id, t.trip_code, r.name AS route_name,
+                            CONCAT(v.registration_number, ' · ', REPLACE(v.vehicle_type, '_', ' ')) AS vehicle,
+                            TRIM(CONCAT(COALESCE(du.first_name,''), ' ', COALESCE(du.last_name,''))) AS driver,
+                            t.departure_time,
+                            (SELECT COUNT(*) FROM bookings b WHERE b.trip_id = t.id AND b.status IN ('pending','confirmed','completed')) AS seats_booked,
+                            t.seats_total, t.fare, t.status
+                     FROM $joins WHERE $where ORDER BY t.departure_time DESC LIMIT " . $paginator->limit() . ' OFFSET ' . $paginator->offset(),
+                    $params
+                )
+            );
+            $columns = ['trip_code', 'route_name', 'vehicle', 'driver', 'departure_time', 'seats_booked', 'fare', 'status'];
+            if ($role === 'operator') {
+                $opId = (int) Auth::operatorId();
+                $board = [
+                    'today'     => $db->count("SELECT COUNT(*) FROM trips WHERE operator_id = ? AND DATE(departure_time) = CURDATE()", [$opId]),
+                    'boarding'  => $db->count("SELECT COUNT(*) FROM trips WHERE operator_id = ? AND status = 'boarding'", [$opId]),
+                    'collected' => (float) $db->value(
+                        "SELECT COALESCE(SUM(p.amount),0) FROM payments p
+                         INNER JOIN bookings b ON b.id = p.booking_id
+                         INNER JOIN trips t ON t.id = b.trip_id
+                         WHERE t.operator_id = ? AND p.status = 'successful' AND DATE(p.completed_at) = CURDATE()", [$opId]),
+                    'cash'      => (float) $db->value(
+                        "SELECT COALESCE(SUM(p.amount),0) FROM payments p
+                         INNER JOIN bookings b ON b.id = p.booking_id
+                         INNER JOIN trips t ON t.id = b.trip_id
+                         WHERE t.operator_id = ? AND p.status = 'successful' AND p.method = 'cash' AND DATE(p.completed_at) = CURDATE()", [$opId]),
+                ];
+            }
+        } elseif (isset(self::RESOURCES[$resource])) {
+            [$table, $select] = self::RESOURCES[$resource];
+            if ($national && in_array($resource, ['emergencies', 'complaints', 'operators'], true)) {
+                $summary = $this->nationalSummary($resource);
+            } else {
+                [$where, $params] = $this->scope($role, $resource);
+                $term = $this->request->str('search');
+                if ($term !== '') {
+                    $conditions = [];
+                    foreach (explode(',', $select) as $column) { $conditions[] = "CAST(`$column` AS CHAR) LIKE ?"; $params[] = '%' . $term . '%'; }
+                    $where = '(' . $where . ')';
+                    $where .= ' AND (' . implode(' OR ', $conditions) . ')';
+                }
+                $total = $db->count("SELECT COUNT(*) FROM `$table` WHERE $where", $params);
+                $paginator = new Paginator($total, $this->request->int('page', 1), 20);
+                $rows = $db->select("SELECT $select FROM `$table` WHERE $where ORDER BY id DESC LIMIT " . $paginator->limit() . ' OFFSET ' . $paginator->offset(), $params);
+                $columns = explode(',', $select);
+                if ($resource === 'vehicles' && $rows) {
+                    $photos = (new VehicleModel())->photosFor(array_map(static fn (array $r): int => (int) $r['id'], $rows));
+                }
             }
         } elseif (in_array($resource, ['monitor', 'tracking'], true)) {
+            $district = $role === 'authority' ? Auth::authorityDistrict() : null;
+            $districtRouteIds = '(SELECT id FROM routes WHERE origin_name = ? OR destination_name = ?)';
             $ids = null;
             if ($role === 'driver') {
                 $ids = array_column($db->select('SELECT id FROM vehicles WHERE driver_id = ? OR id IN (SELECT vehicle_id FROM trips WHERE driver_id = ?)', [(int) Auth::driverId(), (int) Auth::driverId()]), 'id');
                 if (!$ids) $ids = [0];
+            } elseif ($district !== null) {
+                $ids = array_column($db->select(
+                    "SELECT DISTINCT vehicle_id FROM trips WHERE status IN ('scheduled','boarding','in_transit') AND route_id IN $districtRouteIds",
+                    [$district, $district]
+                ), 'vehicle_id');
+                if (!$ids) $ids = [0];
             }
             $positions = GpsService::latestPositions($ids);
-            $map = ['center' => [0.3476,32.5825], 'zoom' => 12, 'vehicles' => array_map(static fn ($p) => [
-                'id' => (int) $p['vehicle_id'], 'lat' => (float) $p['latitude'], 'lng' => (float) $p['longitude'],
-                'label' => $p['registration_number'], 'status' => $p['status'], 'simulated' => (bool) $p['is_simulated'],
-            ], $positions)];
+
+            // Draw the path each vehicle is travelling and name the route on
+            // every marker so the network map shows routes, not just dots.
+            $tripSql = "SELECT DISTINCT vehicle_id, route_id FROM trips WHERE status IN ('scheduled','boarding','in_transit')";
+            $tripParams = [];
+            if ($district !== null) {
+                $tripSql .= " AND route_id IN $districtRouteIds";
+                $tripParams = [$district, $district];
+            }
+            $vehicleRoute = [];
+            foreach ($db->select($tripSql, $tripParams) as $t) {
+                $vehicleRoute[(int) $t['vehicle_id']] = (int) $t['route_id'];
+            }
+            $routeNames = [];
+            $routes = [];
+            $routeIds = array_values(array_unique(array_filter($vehicleRoute)));
+            if ($routeIds) {
+                $placeholders = implode(',', array_fill(0, count($routeIds), '?'));
+                foreach ($db->select("SELECT id, name, colour FROM routes WHERE id IN ($placeholders)", $routeIds) as $r) {
+                    $routeNames[(int) $r['id']] = $r['name'];
+                    $points = GpsService::routePolyline((int) $r['id']);
+                    if (count($points) < 2) {
+                        continue;
+                    }
+                    $routes[] = [
+                        'label'  => $r['name'],
+                        'color'  => $r['colour'] ?: '#2563EB',
+                        'points' => array_map(static fn ($p) => [(float) $p['latitude'], (float) $p['longitude']], $points),
+                    ];
+                }
+            }
+
+            $map = [
+                'center' => [0.3476, 32.5825],
+                'zoom'   => 12,
+                'routes' => $routes,
+                'vehicles' => array_map(static function ($p) use ($vehicleRoute, $routeNames): array {
+                    $routeId = $vehicleRoute[(int) $p['vehicle_id']] ?? null;
+                    return [
+                        'id' => (int) $p['vehicle_id'], 'lat' => (float) $p['latitude'], 'lng' => (float) $p['longitude'],
+                        'label' => $p['registration_number'], 'status' => $p['status'], 'simulated' => (bool) $p['is_simulated'],
+                        'route' => $routeId !== null ? ($routeNames[$routeId] ?? null) : null,
+                    ];
+                }, $positions),
+            ];
         } elseif ($resource === 'settings') {
             if ($role === 'admin') {
                 $rows = $db->select('SELECT setting_key,setting_value,label FROM system_settings ORDER BY group_name,setting_key');
@@ -102,10 +231,15 @@ final class StaffController extends Controller
                 $rows = $db->select('SELECT company_name,contact_email,contact_phone,address,description FROM operators WHERE id = ?', [(int) Auth::operatorId()]);
                 $columns = ['company_name','contact_email','contact_phone','address','description'];
             }
+        } elseif ($resource === 'traffic') {
+            $traffic = $this->traffic();
+            [$routeWhere, $routeParams] = $this->scope($role, 'routes');
+            $choices['routes'] = $db->select("SELECT id, CONCAT(name, ' (', route_code, ')') AS label FROM routes WHERE status = 'active' AND ($routeWhere) ORDER BY name LIMIT 500", $routeParams);
+        } elseif ($resource === 'analytics') {
+            $analytics = $this->analytics();
         } else {
             $report = $this->report($role);
         }
-        $choices = [];
         if (in_array($resource, ['trips','vehicles','routes','deliveries','drivers'], true) && in_array($role, ['admin','operator'], true)) {
             foreach (['vehicles' => 'registration_number', 'routes' => 'name', 'drivers' => 'license_number'] as $table => $label) {
                 [$where,$params] = $this->scope($role, $table);
@@ -120,9 +254,342 @@ final class StaffController extends Controller
             if (!$db->exists("SELECT 1 FROM trips WHERE id = ? AND ($where)", array_merge([$id],$params))) throw new AuthorizationException('This trip is outside your workspace.');
             $manifest = (new BookingModel())->passengersForTrip($id);
         }
-        $this->view('staff/workspace', compact('role','resource','rows','columns','paginator','choices','map','report','manifest','photos') + [
-            'title' => $entry[0] . ' - UniGo', 'pageTitle' => $entry[0], 'pageSub' => $entry[1], 'withLeaflet' => $map !== null,
+        $pageSub = $entry[1];
+        if ($role === 'authority') {
+            $district = Auth::authorityDistrict();
+            $pageSub .= $district === null ? ' - National office' : ' - District: ' . $district;
+        }
+        $this->view('staff/workspace', compact('role','resource','rows','columns','paginator','choices','map','report','manifest','photos','analytics','traffic','summary','board') + [
+            'title' => $entry[0] . ' - UniGo', 'pageTitle' => $entry[0], 'pageSub' => $pageSub,
+            'withLeaflet' => $map !== null || !empty($traffic['map']), 'withChart' => $analytics !== [],
         ], 'layouts/app');
+    }
+
+    /** Network performance analytics for the authority workspace. */
+    private function analytics(): array
+    {
+        $district = Auth::authorityDistrict();
+        $stats = new StatsModel();
+        $fare = $stats->fareByRoute(10, $district);
+        return [
+            'top_routes'  => $stats->topRoutes(8, $district),
+            'operators'   => $stats->operatorPerformance(8, $district),
+            'drivers'     => $stats->topDrivers(8, $district),
+            'transport'   => $stats->transportTypeMix($district),
+            'trip_status' => $stats->tripStatusMix($district),
+            'areas'       => $stats->tripsByArea(8, $district),
+            'fare'        => $fare,
+            'fare_totals' => [
+                'collected'  => array_sum(array_map(static fn ($r) => (float) $r['collected'], $fare)),
+                'bookings'   => array_sum(array_map(static fn ($r) => (int) $r['bookings'], $fare)),
+                'overcharge' => array_sum(array_map(static fn ($r) => (int) $r['overcharge_complaints'], $fare)),
+            ],
+        ];
+    }
+
+    /**
+     * National rollups. A regulator's national office works on summaries (who
+     * has how many incidents, complaints, operators - by area, category and
+     * company), while district officers handle the individual records. See
+     * staff/rollup.php for the renderer.
+     */
+    private function nationalSummary(string $resource): array
+    {
+        $db = Database::instance();
+        return match ($resource) {
+            'emergencies' => $this->nationalEmergencies($db),
+            'complaints'  => $this->nationalComplaints($db),
+            'operators'   => $this->nationalOperators($db),
+            default       => [],
+        };
+    }
+
+    private function nationalEmergencies(Database $db): array
+    {
+        $open = "ea.status NOT IN ('resolved','dismissed')";
+        return [
+            'resource' => 'emergencies',
+            'title'    => 'Alerts by area',
+            'note'     => 'A national regulator tracks totals by area and severity; district officers work the individual alerts in their own workspace.',
+            'tiles'    => [
+                ['Total alerts', $db->count('SELECT COUNT(*) FROM emergency_alerts'), 'siren', 'primary'],
+                ['Open alerts', $db->count("SELECT COUNT(*) FROM emergency_alerts ea WHERE $open"), 'alert', 'danger'],
+                ['Critical', $db->count("SELECT COUNT(*) FROM emergency_alerts WHERE severity = 'critical'"), 'flame', 'danger'],
+            ],
+            'cols'  => ['area' => 'Area (route origin)', 'total' => 'Alerts', 'open' => 'Open', 'critical' => 'Critical'],
+            'right' => ['total', 'open', 'critical'],
+            'rows'  => array_map(static fn ($r): array => [
+                'area' => (string) $r['area'], 'total' => (int) $r['total'], 'open' => (int) $r['open'], 'critical' => (int) $r['critical'],
+            ], $db->select(
+                "SELECT COALESCE(r.origin_name, 'Unassigned') AS area,
+                        COUNT(ea.id) AS total,
+                        SUM($open) AS open,
+                        SUM(ea.severity = 'critical') AS critical
+                 FROM emergency_alerts ea
+                 LEFT JOIN trips t ON t.id = ea.trip_id
+                 LEFT JOIN routes r ON r.id = t.route_id
+                 GROUP BY r.origin_name
+                 ORDER BY critical DESC, total DESC"
+            )),
+        ];
+    }
+
+    private function nationalComplaints(Database $db): array
+    {
+        $open = "c.status NOT IN ('resolved','dismissed')";
+        return [
+            'resource' => 'complaints',
+            'title'    => 'Complaints by category',
+            'note'     => 'Categories follow the regulated public complaint types; district officers resolve the individual complaints.',
+            'tiles'    => [
+                ['Total complaints', $db->count('SELECT COUNT(*) FROM complaints'), 'message', 'primary'],
+                ['Open', $db->count("SELECT COUNT(*) FROM complaints c WHERE $open"), 'alert', 'warning'],
+                ['Overcharging (open)', $db->count("SELECT COUNT(*) FROM complaints c WHERE c.category = 'overcharging' AND $open"), 'coins', 'danger'],
+            ],
+            'cols'  => ['category' => 'Category', 'total' => 'Total', 'open' => 'Open'],
+            'right' => ['total', 'open'],
+            'rows'  => array_map(static fn ($r): array => [
+                'category' => ucwords(str_replace('_', ' ', (string) $r['category'])),
+                'total' => (int) $r['total'], 'open' => (int) $r['open'],
+            ], $db->select(
+                "SELECT c.category, COUNT(*) AS total, SUM($open) AS open
+                 FROM complaints c
+                 GROUP BY c.category
+                 ORDER BY total DESC"
+            )),
+        ];
+    }
+
+    private function nationalOperators(Database $db): array
+    {
+        return [
+            'resource' => 'operators',
+            'title'    => 'Operators at a glance',
+            'note'     => 'Fleet, activity and collected fare per licensed operator. District officers manage the individual operator files.',
+            'tiles'    => [
+                ['Approved', $db->count("SELECT COUNT(*) FROM operators WHERE approval_status = 'approved'"), 'check', 'success'],
+                ['Pending', $db->count("SELECT COUNT(*) FROM operators WHERE approval_status = 'pending'"), 'clock', 'warning'],
+                ['Suspended', $db->count("SELECT COUNT(*) FROM operators WHERE approval_status = 'suspended'"), 'shield', 'danger'],
+            ],
+            'cols'  => ['company' => 'Operator', 'status' => 'Status', 'vehicles' => 'Vehicles', 'drivers' => 'Drivers', 'trips' => 'Trips', 'bookings' => 'Bookings', 'revenue' => 'Fare collected', 'rating' => 'Rating'],
+            'right' => ['vehicles', 'drivers', 'trips', 'bookings', 'revenue', 'rating'],
+            'rows'  => array_map(static fn ($r): array => [
+                'company' => (string) $r['company_name'],
+                'status'  => ucfirst((string) $r['approval_status']),
+                'vehicles' => (int) $r['vehicles'],
+                'drivers'  => (int) $r['drivers'],
+                'trips'    => (int) $r['trips'],
+                'bookings' => (int) $r['bookings'],
+                'revenue'  => 'UGX ' . number_format((float) $r['revenue']),
+                'rating'   => (float) $r['rating_avg'] > 0 ? number_format((float) $r['rating_avg'], 1) : '-',
+            ], $db->select(
+                "SELECT o.company_name, o.approval_status, o.rating_avg,
+                        (SELECT COUNT(*) FROM vehicles v WHERE v.operator_id = o.id) AS vehicles,
+                        (SELECT COUNT(*) FROM drivers d WHERE d.operator_id = o.id) AS drivers,
+                        COUNT(DISTINCT t.id) AS trips,
+                        COUNT(b.id) AS bookings,
+                        COALESCE(SUM(CASE WHEN b.payment_status = 'paid' AND b.status <> 'cancelled' THEN b.fare ELSE 0 END),0) AS revenue
+                 FROM operators o
+                 LEFT JOIN trips t ON t.operator_id = o.id
+                 LEFT JOIN bookings b ON b.trip_id = t.id
+                 GROUP BY o.id
+                 ORDER BY revenue DESC"
+            )),
+        ];
+    }
+
+    /** Traffic / congestion feed plus suggested diversion routes. */
+    private function traffic(): array
+    {
+        $district = Auth::authorityDistrict();
+        $stats = new StatsModel();
+        $reports = $stats->trafficSnapshot(30, $district);
+        $advice = (new RouteAdvisor())->advise($district);
+        $map = $this->trafficMap($advice['ranking'] ?? [], $reports);
+        $map['vehicles'] = $this->liveVehicleMarkers($district);
+        return [
+            'reports'     => $reports,
+            'congestion'  => $stats->congestionByRoute(8, $district),
+            'diversions'  => (new TrafficModel())->suggestForOpenReports($reports),
+            'ai'          => $advice,
+            'map'         => $map,
+        ];
+    }
+
+    /** Vehicle markers for the network map (all vehicles, or the district's). */
+    private function liveVehicleMarkers(?string $district): array
+    {
+        $db = Database::instance();
+        $filter = '';
+        $params = [];
+        if ($district !== null) {
+            $filter = " AND route_id IN (SELECT id FROM routes WHERE origin_name = ? OR destination_name = ?)";
+            $params = [$district, $district];
+        }
+        $ids = array_column($db->select(
+            "SELECT DISTINCT vehicle_id FROM trips WHERE status IN ('scheduled','boarding','in_transit')$filter", $params
+        ), 'vehicle_id');
+        if (!$ids) {
+            return [];
+        }
+        $positions = GpsService::latestPositions($ids);
+
+        $vehicleRoute = [];
+        foreach ($db->select(
+            "SELECT DISTINCT vehicle_id, route_id FROM trips WHERE status IN ('scheduled','boarding','in_transit')$filter", $params
+        ) as $t) {
+            $vehicleRoute[(int) $t['vehicle_id']] = (int) $t['route_id'];
+        }
+        $routeIds = array_values(array_unique(array_filter($vehicleRoute)));
+        $routeNames = [];
+        if ($routeIds) {
+            $placeholders = implode(',', array_fill(0, count($routeIds), '?'));
+            foreach ($db->select("SELECT id, name FROM routes WHERE id IN ($placeholders)", $routeIds) as $r) {
+                $routeNames[(int) $r['id']] = $r['name'];
+            }
+        }
+        return array_map(static function ($p) use ($vehicleRoute, $routeNames): array {
+            $routeId = $vehicleRoute[(int) $p['vehicle_id']] ?? null;
+            return [
+                'id' => (int) $p['vehicle_id'], 'lat' => (float) $p['latitude'], 'lng' => (float) $p['longitude'],
+                'label' => $p['registration_number'], 'status' => $p['status'], 'simulated' => (bool) $p['is_simulated'],
+                'route' => $routeId !== null ? ($routeNames[$routeId] ?? null) : null,
+            ];
+        }, $positions);
+    }
+
+    /**
+     * Build the network map for the traffic page: each active route drawn in
+     * the colour of its AI congestion grade, with a pin on every report.
+     *
+     * @param array<int,array<string,mixed>> $ranking
+     * @param array<int,array<string,mixed>> $reports
+     * @return array<string,mixed>
+     */
+    private function trafficMap(array $ranking, array $reports): array
+    {
+        $routes = [];
+        foreach (array_slice($ranking, 0, 15) as $entry) {
+            $points = GpsService::routePolyline((int) $entry['route']['id']);
+            if (count($points) < 2) {
+                continue;
+            }
+            $routes[] = [
+                'label'  => $entry['route']['name'] . ' - ' . $entry['label'],
+                'color'  => RouteAdvisor::colourForLabel($entry['label']),
+                'weight' => $entry['label'] === 'Clear' ? 3 : 5,
+                'points' => array_map(static fn ($p) => [(float) $p['latitude'], (float) $p['longitude']], $points),
+            ];
+        }
+
+        $markers = [];
+        foreach ($reports as $r) {
+            if ($r['latitude'] === null || $r['longitude'] === null) {
+                continue;
+            }
+            $where = (string) ($r['location_name'] ?: $r['route_name'] ?: 'Report');
+            $markers[] = [
+                'lat'   => (float) $r['latitude'],
+                'lng'   => (float) $r['longitude'],
+                'type'  => 'dest',
+                'label' => $where,
+                'popup' => '<b>' . htmlspecialchars($where) . '</b><br>'
+                    . htmlspecialchars(ucfirst((string) $r['severity'])) . ' &middot; ' . (int) $r['delay_minutes'] . ' min delay',
+            ];
+        }
+
+        return ['center' => [0.3476, 32.5825], 'zoom' => 11, 'routes' => $routes, 'markers' => $markers];
+    }
+
+    private function saveTraffic(string $role): void
+    {
+        if (!in_array($role, ['authority', 'admin'], true)) {
+            throw new AuthorizationException('Only the authority can manage traffic reports.');
+        }
+        $db = Database::instance();
+        $model = new TrafficModel();
+        $action = $this->request->str('action');
+
+        $district = $role === 'authority' ? Auth::authorityDistrict() : null;
+        $inDistrict = static function (array $routeRow) use ($district): bool {
+            if ($district === null) {
+                return true;
+            }
+            return ($routeRow['origin_name'] ?? null) === $district
+                || ($routeRow['destination_name'] ?? null) === $district;
+        };
+
+        if ($action === 'ai_feedback') {
+            $helpful = $this->request->str('helpful') === '1';
+            (new RouteAdvisor())->learn($helpful);
+            ActivityLog::record('staff.updated', 0, 'traffic', 'AI route advisor feedback: ' . ($helpful ? 'helpful' : 'not helpful'));
+            Flash::success('Thanks - the route advisor nudged its weights.');
+            return;
+        }
+
+        if ($action === 'create') {
+            $routeId = $this->request->int('route_id') ?: null;
+            $location = substr($this->request->str('location_name'), 0, 150);
+            if ($routeId === null && $location === '') {
+                throw new ValidationException('Choose a route or enter a location.');
+            }
+            $route = $routeId ? $db->first('SELECT * FROM routes WHERE id = ?', [$routeId]) : null;
+            if ($route !== null && !$inDistrict($route)) {
+                throw new AuthorizationException('This route is outside your district.');
+            }
+            $severity = $this->request->str('severity', 'medium');
+            $id = $model->createReport([
+                'route_id'      => $routeId,
+                'location_name' => $location !== '' ? $location : (string) ($route['name'] ?? ''),
+                'latitude'      => $route['origin_latitude'] ?? null,
+                'longitude'     => $route['origin_longitude'] ?? null,
+                'category'      => $this->request->str('category', 'congestion'),
+                'severity'      => $severity,
+                'delay_minutes' => $this->request->int('delay_minutes'),
+                'description'   => $this->request->str('description'),
+            ], (int) Auth::id());
+            ActivityLog::record('staff.created', $id, 'traffic', 'Logged a ' . $severity . ' traffic report');
+            if ($route && in_array($severity, ['high', 'critical'], true)) {
+                $alternates = $model->alternatesForRoute($route, 3);
+                $sent = $alternates ? $model->notifyDiversion($route, $alternates, (int) Auth::id()) : 0;
+                Flash::success('Traffic report logged.' . ($sent > 0 ? ' ' . $sent . ' affected user(s) were offered an alternate route.' : ''));
+            } else {
+                Flash::success('Traffic report logged.');
+            }
+            return;
+        }
+
+        $id = $this->request->int('id');
+        $report = $db->first('SELECT * FROM traffic_reports WHERE id = ?', [$id]);
+        if (!$report) {
+            throw new NotFoundException('Traffic report not found.');
+        }
+        if ($district !== null) {
+            $routeReport = $report['route_id'] ? $db->first('SELECT id, origin_name, destination_name FROM routes WHERE id = ?', [(int) $report['route_id']]) : null;
+            if (!$routeReport || !$inDistrict($routeReport)) {
+                throw new AuthorizationException('This traffic report is outside your district.');
+            }
+        }
+        if ($action === 'status') {
+            $status = $this->request->str('status');
+            $model->updateStatus($id, $status, (int) Auth::id());
+            ActivityLog::record('staff.updated', $id, 'traffic', 'Traffic report moved to ' . $status);
+            Flash::success('Traffic report updated.');
+        } elseif ($action === 'diversion') {
+            $route = $report['route_id'] ? $db->first('SELECT * FROM routes WHERE id = ?', [(int) $report['route_id']]) : null;
+            if (!$route) {
+                throw new ValidationException('This report is not linked to a route, so no diversion can be issued.');
+            }
+            $alternates = $model->alternatesForRoute($route, 3);
+            if (!$alternates) {
+                throw new ValidationException('No alternate active route is available for this route.');
+            }
+            $sent = $model->notifyDiversion($route, $alternates, (int) Auth::id());
+            ActivityLog::record('staff.updated', $id, 'traffic', 'Issued a diversion for ' . $route['route_code']);
+            Flash::success($sent > 0 ? 'Diversion issued. ' . $sent . ' affected user(s) were notified.' : 'Diversion route is on record, but nobody is currently booked on this route.');
+        } else {
+            throw new ValidationException('No traffic action is available here.');
+        }
     }
 
     private function report(string $role): array
@@ -152,6 +619,7 @@ final class StaffController extends Controller
         try {
             $db->transaction(function () use ($db,$role,$resource): void {
                 $action = $this->request->str('action');
+                if ($resource === 'traffic') { $this->saveTraffic($role); return; }
                 if ($action === 'create') { $this->create($role,$resource); return; }
                 if ($resource === 'settings') { $this->settings($role); return; }
                 if (!isset(self::RESOURCES[$resource])) throw new ValidationException('No update is available here.');
@@ -169,7 +637,7 @@ final class StaffController extends Controller
                         \App\Services\CashPaymentService::collect($id);
                     } elseif ($action === 'refund_cash') {
                         \App\Services\CashPaymentService::refund($id);
-                    } elseif ($action === 'board' && $role === 'driver') {
+                    } elseif ($action === 'board' && in_array($role, ['driver', 'operator'], true)) {
                         $trip = $db->first('SELECT status FROM trips WHERE id = ?', [(int) $row['trip_id']]);
                         if ($row['status'] !== 'confirmed' || !in_array($trip['status'],['boarding','in_transit'],true)) throw new ValidationException('Only confirmed bookings on boarding or running trips can board.');
                         $db->update('bookings',['boarded_at' => date('Y-m-d H:i:s')],'id = ?',[$id]);

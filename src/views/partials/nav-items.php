@@ -65,16 +65,18 @@ $map = [
     ],
 
     'authority' => [
-        ['label' => 'Command', 'items' => [
-            ['path' => '/authority/dashboard',  'label' => 'Dashboard',   'icon' => 'dashboard'],
-            ['path' => '/authority/monitor',    'label' => 'Live network', 'icon' => 'globe'],
+        ['label' => 'Overview', 'items' => [
+            ['path' => '/authority/dashboard', 'label' => 'Dashboard',     'icon' => 'dashboard'],
+            ['path' => '/authority/traffic',   'label' => 'Live network',  'icon' => 'globe', 'badge' => '/authority/traffic'],
+        ]],
+        ['label' => 'Public safety', 'items' => [
             ['path' => '/authority/emergencies', 'label' => 'Emergencies', 'icon' => 'siren', 'badge' => '/authority/emergencies', 'danger' => true],
             ['path' => '/authority/complaints',  'label' => 'Complaints',  'icon' => 'message', 'badge' => '/authority/complaints'],
         ]],
         ['label' => 'Oversight', 'items' => [
             ['path' => '/authority/operators', 'label' => 'Operators', 'icon' => 'building'],
-            ['path' => '/authority/reports',   'label' => 'Reports',   'icon' => 'bar-chart'],
             ['path' => '/authority/analytics', 'label' => 'Analytics', 'icon' => 'pie-chart'],
+            ['path' => '/authority/reports',   'label' => 'Reports',   'icon' => 'bar-chart'],
         ]],
     ],
 

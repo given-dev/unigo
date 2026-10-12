@@ -116,6 +116,25 @@ CREATE TABLE `passengers` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------------
+-- 4b. authorities  -  regulator officers (national or district)
+--     A blank district means the officer oversees the whole network.
+-- ---------------------------------------------------------------------------
+DROP TABLE IF EXISTS `authorities`;
+CREATE TABLE `authorities` (
+  `id`            INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `user_id`       INT UNSIGNED NOT NULL,
+  `title`         VARCHAR(120) NOT NULL DEFAULT '',
+  `region`        VARCHAR(80)  NOT NULL DEFAULT '',
+  `district`      VARCHAR(80)  NOT NULL DEFAULT '',
+  `contact_phone` VARCHAR(25)  NOT NULL DEFAULT '',
+  `created_at`    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_authorities_user` (`user_id`),
+  KEY `ix_authorities_district` (`district`),
+  CONSTRAINT `fk_authorities_user` FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
 -- 5. operators  -  transport companies
 -- ---------------------------------------------------------------------------
 DROP TABLE IF EXISTS `operators`;

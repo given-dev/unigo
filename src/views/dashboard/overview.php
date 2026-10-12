@@ -16,7 +16,9 @@ $headline = $headline ?? [];
 $titles = [
     'driver'    => ['Driver dashboard', 'Your trips and activity on the network.'],
     'operator'  => ['Operator dashboard', 'Fleet, drivers, bookings and revenue at a glance.'],
-    'authority' => ['Authority dashboard', 'Network health, safety and compliance oversight.'],
+    'authority' => Auth::authorityDistrict() === null
+        ? ['Authority dashboard', 'National network health, safety and compliance oversight.']
+        : ['District dashboard', 'Health, safety and compliance oversight for ' . Auth::authorityDistrict() . ' district.'],
     'admin'     => ['Administrator dashboard', 'Platform-wide accounts, activity and system health.'],
 ];
 
@@ -34,7 +36,7 @@ $stats = [
         ['Today revenue',    money($headline['today_revenue'] ?? 0), 'coins', 'success', '/operator/revenue'],
     ],
     'authority' => [
-        ['Active trips',     $headline['active_trips'] ?? 0,      'bus',     'primary', '/authority/monitor'],
+        ['Active trips',     $headline['active_trips'] ?? 0,      'bus',     'primary', '/authority/traffic'],
         ['Open emergencies', $headline['open_emergencies'] ?? 0,  'siren',   'danger',  '/authority/emergencies'],
         ['Open complaints',  $headline['open_complaints'] ?? 0,   'message', 'warning', '/authority/complaints'],
         ['Active routes',    $headline['active_routes'] ?? 0,     'route',   'info',    '/authority/operators'],
@@ -61,10 +63,10 @@ $links = [
         ['/operator/reports',  'bar-chart', 'Reports'],
     ],
     'authority' => [
-        ['/authority/monitor',     'globe',     'Live network'],
+        ['/authority/traffic',     'globe',     'Live network'],
         ['/authority/emergencies', 'siren',     'Emergencies'],
         ['/authority/operators',   'building',  'Operators'],
-        ['/authority/reports',     'bar-chart', 'Reports'],
+        ['/authority/analytics',   'pie-chart', 'Analytics'],
     ],
     'admin' => [
         ['/admin/users',    'users',     'Users'],

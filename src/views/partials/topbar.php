@@ -100,8 +100,9 @@ $hasSidebar = empty($navHidden);
                     <a class="dropdown__item" href="<?= e(url('/profile')) ?>" role="menuitem">
                         <i class="icon" data-icon="user">user</i> My profile
                     </a>
-                    <?php if (Auth::isStaff()): ?>
-                        <a class="dropdown__item" href="<?= e(url(Auth::isAdmin() ? '/admin/settings' : '/operator/settings')) ?>" role="menuitem">
+                    <?php $settingsPath = Auth::isAdmin() ? '/admin/settings' : (Auth::hasRole('operator') ? '/operator/settings' : null); ?>
+                    <?php if ($settingsPath !== null): ?>
+                        <a class="dropdown__item" href="<?= e(url($settingsPath)) ?>" role="menuitem">
                             <i class="icon" data-icon="settings">settings</i> Settings
                         </a>
                     <?php endif; ?>

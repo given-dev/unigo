@@ -42,10 +42,10 @@ final class StubController extends Controller
         '/operator/settings'  => ['Settings', 'Company profile and operating preferences.', 'operator'],
 
         // Authority
-        '/authority/monitor'      => ['Live network', 'Network-wide vehicle map and congestion.', 'authority'],
         '/authority/emergencies'  => ['Emergencies', 'Open alerts requiring a coordinated response.', 'authority'],
         '/authority/complaints'   => ['Complaints', 'Public complaints and their resolution.', 'authority'],
         '/authority/operators'    => ['Operators', 'Licensed operators and compliance watchlist.', 'authority'],
+        '/authority/traffic'      => ['Live network', 'Live vehicle positions, traffic reports, congestion and AI route guidance.', 'authority'],
         '/authority/reports'      => ['Reports', 'Safety and regulatory reporting.', 'authority'],
         '/authority/analytics'    => ['Analytics', 'Network performance and demand analytics.', 'authority'],
 

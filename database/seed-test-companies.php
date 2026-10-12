@@ -5,14 +5,15 @@
  * Creates three ready-to-use test companies so every role has a small, real
  * dataset to work with:
  *
- *   1. Pearl Test Bus Services   bus   Kampala -> Jinja    cash booking, seat 1
+ *   1. Pearl Test Bus Services   bus   Kampala -> Jinja    mobile money booking, seat 1
  *   2. City Test Taxi Services   taxi  Kampala -> Entebbe  cash booking, seat 1
  *   3. Swift Test Logistics      truck Kampala -> Mukono   test parcel
  *
- * Each company gets an operator, a driver, a passenger/customer and an
- * authority account, one vehicle (with a seat map), one route (with origin and
+ * Each company gets an operator, a driver, a passenger/customer and a
+ * regulator account, one vehicle (with a seat map), one route (with origin and
  * destination stops), a scheduled trip and the record that proves the flow
- * (a cash booking for the bus and taxi, a parcel for the logistics company).
+ * (a paid mobile-money booking for the bus, a cash booking for the taxi, and a
+ * parcel for the logistics company).
  *
  * Every account uses the reserved @unigo.test domain, so this only runs when
  * UNIGO_DEMO_MODE=1 (never in production) and against a disposable database.
@@ -46,9 +47,13 @@ const TEST_PASSWORD = 'UniGo@2026';
 
 /** Accounts created by this seeder (used to detect and clean a previous run). */
 const TEST_EMAILS = [
-    'bus.operator@unigo.test', 'bus.driver@unigo.test', 'bus.passenger@unigo.test', 'bus.authority@unigo.test',
-    'taxi.operator@unigo.test', 'taxi.driver@unigo.test', 'taxi.passenger@unigo.test', 'taxi.authority@unigo.test',
-    'logistics.operator@unigo.test', 'logistics.driver@unigo.test', 'logistics.customer@unigo.test', 'logistics.authority@unigo.test',
+    'bus.operator@unigo.test', 'bus.driver@unigo.test', 'bus.passenger@unigo.test',
+    'taxi.operator@unigo.test', 'taxi.driver@unigo.test', 'taxi.passenger@unigo.test',
+    'logistics.operator@unigo.test', 'logistics.driver@unigo.test', 'logistics.customer@unigo.test',
+    // Regulator officers: one national office plus one officer per district.
+    'mowt.authority@unigo.test', 'kampala.authority@unigo.test', 'jinja.authority@unigo.test', 'mukono.authority@unigo.test',
+    // Legacy per-company regulator accounts from the first demo seed; cleaned on --fresh.
+    'bus.authority@unigo.test', 'taxi.authority@unigo.test', 'logistics.authority@unigo.test',
 ];
 
 const TEST_OPERATOR_LICENCES = ['TEST-BUS-001', 'TEST-TAXI-001', 'TEST-LOG-001'];
@@ -132,6 +137,11 @@ function purgeTestData(Database $db): void
 
         ['DELETE FROM notifications WHERE user_id IN (' . $usersByEmail . ')', $emails],
 
+        ['DELETE FROM traffic_reports
+            WHERE reported_by IN (' . $usersByEmail . ')
+               OR route_id IN (' . $routesByCode . ')',
+            array_merge($emails, $codes)],
+
         ['DELETE FROM bookings
             WHERE passenger_id IN (' . $usersByEmail . ')
                OR trip_id IN (SELECT id FROM trips WHERE operator_id IN (' . $operatorsByLic . '))',
@@ -169,6 +179,8 @@ function purgeTestData(Database $db): void
 
         ['DELETE FROM passengers WHERE user_id IN (' . $usersByEmail . ')', $emails],
 
+        ['DELETE FROM authorities WHERE user_id IN (' . $usersByEmail . ')', $emails],
+
         ['DELETE FROM user_roles WHERE user_id IN (' . $usersByEmail . ')', $emails],
 
         ['DELETE FROM users WHERE email IN (' . qmarks($emails) . ')', $emails],
@@ -195,7 +207,6 @@ $plan = [
         'company'   => ['name' => 'Pearl Test Bus Services', 'licence' => 'TEST-BUS-001', 'address' => 'Kampala, Uganda',
                         'description' => 'Test commuter bus company used for end-to-end UniGo verification.'],
         'operator'  => ['email' => 'bus.operator@unigo.test',  'first' => 'Daniel', 'last' => 'Kato',    'phone' => '+256700000101'],
-        'authority' => ['email' => 'bus.authority@unigo.test', 'first' => 'Grace',  'last' => 'Nambi',   'phone' => '+256700000104'],
         'driver'    => ['email' => 'bus.driver@unigo.test',    'first' => 'Peter',  'last' => 'Ssemanda','phone' => '+256700000102',
                         'licence' => 'TEST-DL-B001', 'licence_type' => 'bus'],
         'passenger' => ['email' => 'bus.passenger@unigo.test', 'first' => 'Sarah',  'last' => 'Namutebi','phone' => '+256700000103',
@@ -207,15 +218,16 @@ $plan = [
                         'origin_latitude' => 0.311700, 'origin_longitude' => 32.576700,
                         'destination_latitude' => 0.424400, 'destination_longitude' => 33.204100,
                         'distance_km' => 80.0, 'duration_minutes' => 120, 'fare' => 20000.0, 'colour' => '#2563EB'],
-        'trip'      => ['departure' => '2026-10-10 08:00:00', 'arrival' => '2026-10-10 10:00:00'],
-        'booking'   => ['seat' => '1', 'payment' => 'cash'],
+        'trip'      => ['departure' => date('Y-m-d H:i:s', strtotime('-10 minutes')),
+                        'arrival'   => date('Y-m-d H:i:s', strtotime('+110 minutes')),
+                        'status'    => 'in_transit'],
+        'booking'   => ['seat' => '1', 'payment' => 'mobile_money'],
     ],
     [
         'label'     => 'taxi',
         'company'   => ['name' => 'City Test Taxi Services', 'licence' => 'TEST-TAXI-001', 'address' => 'Entebbe, Uganda',
                         'description' => 'Test taxi company used for end-to-end UniGo verification.'],
         'operator'  => ['email' => 'taxi.operator@unigo.test',  'first' => 'Rebecca', 'last' => 'Achieng',   'phone' => '+256700000201'],
-        'authority' => ['email' => 'taxi.authority@unigo.test', 'first' => 'David',   'last' => 'Ssenyonga','phone' => '+256700000204'],
         'driver'    => ['email' => 'taxi.driver@unigo.test',    'first' => 'James',   'last' => 'Okello',   'phone' => '+256700000202',
                         'licence' => 'TEST-DL-T001', 'licence_type' => 'psv'],
         'passenger' => ['email' => 'taxi.passenger@unigo.test', 'first' => 'Brian',   'last' => 'Mugisha',  'phone' => '+256700000203',
@@ -227,7 +239,9 @@ $plan = [
                         'origin_latitude' => 0.311700, 'origin_longitude' => 32.576700,
                         'destination_latitude' => 0.051200, 'destination_longitude' => 32.462000,
                         'distance_km' => 40.0, 'duration_minutes' => 60, 'fare' => 30000.0, 'colour' => '#059669'],
-        'trip'      => ['departure' => '2026-10-10 09:00:00', 'arrival' => '2026-10-10 10:00:00'],
+        'trip'      => ['departure' => date('Y-m-d H:i:s', strtotime('+30 minutes')),
+                        'arrival'   => date('Y-m-d H:i:s', strtotime('+90 minutes')),
+                        'status'    => 'scheduled'],
         'booking'   => ['seat' => '1', 'payment' => 'cash'],
     ],
     [
@@ -235,7 +249,6 @@ $plan = [
         'company'   => ['name' => 'Swift Test Logistics', 'licence' => 'TEST-LOG-001', 'address' => 'Mukono, Uganda',
                         'description' => 'Test logistics company used for end-to-end UniGo parcel verification.'],
         'operator'  => ['email' => 'logistics.operator@unigo.test',  'first' => 'Michael', 'last' => 'Waiswa', 'phone' => '+256700000301'],
-        'authority' => ['email' => 'logistics.authority@unigo.test', 'first' => 'Mary',    'last' => 'Atim',   'phone' => '+256700000304'],
         'driver'    => ['email' => 'logistics.driver@unigo.test',    'first' => 'Joseph',  'last' => 'Ouma',   'phone' => '+256700000302',
                         'licence' => 'TEST-DL-L001', 'licence_type' => 'heavy'],
         'passenger' => ['email' => 'logistics.customer@unigo.test',  'first' => 'Agnes',   'last' => 'Nakato', 'phone' => '+256700000303',
@@ -247,11 +260,31 @@ $plan = [
                         'origin_latitude' => 0.311700, 'origin_longitude' => 32.576700,
                         'destination_latitude' => 0.353300, 'destination_longitude' => 32.755300,
                         'distance_km' => 21.0, 'duration_minutes' => 90, 'fare' => 15000.0, 'colour' => '#EA580C'],
-        'trip'      => ['departure' => '2026-10-10 07:00:00', 'arrival' => '2026-10-10 08:30:00'],
+        'trip'      => ['departure' => date('Y-m-d H:i:s', strtotime('+45 minutes')),
+                        'arrival'   => date('Y-m-d H:i:s', strtotime('+135 minutes')),
+                        'status'    => 'scheduled'],
         'parcel'    => ['description' => 'Box of exercise books', 'weight_kg' => 10.0, 'declared_value' => 100000.0,
                         'price' => 15000.0, 'is_fragile' => 0, 'pickup' => 'Kampala Central', 'dropoff' => 'Mukono Town',
                         'recipient_name' => 'Henry Musoke', 'recipient_phone' => '+256700000305'],
     ],
+];
+
+// ---------------------------------------------------------------------------
+// Regulator officers
+//
+// The authority role is a network-wide regulator, not a company role. A blank
+// district is the national office (sees every operator); a named district
+// scopes the officer to routes that start or end in that district.
+// ---------------------------------------------------------------------------
+$authorityPlan = [
+    ['email' => 'mowt.authority@unigo.test',    'first' => 'Moses',  'last' => 'Waiswa',   'phone' => '+256700000401',
+     'title' => 'Ministry of Works and Transport', 'region' => 'National', 'district' => ''],
+    ['email' => 'kampala.authority@unigo.test', 'first' => 'Alice',  'last' => 'Nakimuli', 'phone' => '+256700000402',
+     'title' => 'Kampala Capital City Authority', 'region' => 'Central', 'district' => 'Kampala'],
+    ['email' => 'jinja.authority@unigo.test',   'first' => 'Robert', 'last' => 'Mwebe',    'phone' => '+256700000403',
+     'title' => 'Jinja District Transport Officer', 'region' => 'Eastern', 'district' => 'Jinja'],
+    ['email' => 'mukono.authority@unigo.test',  'first' => 'Sarah',  'last' => 'Kirabo',   'phone' => '+256700000404',
+     'title' => 'Mukono District Transport Officer', 'region' => 'Central', 'district' => 'Mukono'],
 ];
 
 // ---------------------------------------------------------------------------
@@ -298,7 +331,6 @@ try {
         $operatorUserId  = $insertUser($c['operator']['email'],  $c['operator']['first'],  $c['operator']['last'],  $c['operator']['phone'],  'operator');
         $driverUserId    = $insertUser($c['driver']['email'],    $c['driver']['first'],    $c['driver']['last'],    $c['driver']['phone'],    'driver');
         $passengerUserId = $insertUser($c['passenger']['email'], $c['passenger']['first'], $c['passenger']['last'], $c['passenger']['phone'], 'passenger');
-        $insertUser($c['authority']['email'], $c['authority']['first'], $c['authority']['last'], $c['authority']['phone'], 'authority');
 
         // 2. Company profile ---------------------------------------------
         $operatorId = $db->insert('operators', [
@@ -425,16 +457,33 @@ try {
             'departure_time' => $c['trip']['departure'],
             'arrival_time'   => $c['trip']['arrival'],
             'boarding_opens' => date('Y-m-d H:i:s', strtotime($c['trip']['departure'] . ' -20 minutes')),
-            'status'         => 'scheduled',
+            'status'         => $c['trip']['status'] ?? 'scheduled',
             'seats_total'    => (int) $c['vehicle']['capacity'],
             'fare'           => $c['route']['fare'],
             'currency'       => 'UGX',
             'created_at'     => stamp(),
         ]);
 
+        // 7b. Initial GPS fix so the live map shows each vehicle straight away.
+        //     The in-transit trip is placed partway along its route.
+        $progress = ($c['trip']['status'] ?? 'scheduled') === 'in_transit' ? 0.4 : 0.0;
+        $db->insert('vehicle_locations', [
+            'vehicle_id'   => $vehicleId,
+            'trip_id'      => $tripId,
+            'latitude'     => $c['route']['origin_latitude'] + ($c['route']['destination_latitude'] - $c['route']['origin_latitude']) * $progress,
+            'longitude'    => $c['route']['origin_longitude'] + ($c['route']['destination_longitude'] - $c['route']['origin_longitude']) * $progress,
+            'speed'        => $progress > 0 ? 46.0 : 0.0,
+            'heading'      => 0.0,
+            'accuracy'     => 8.0,
+            'recorded_at'  => stamp(),
+            'source'       => 'simulator',
+            'is_simulated' => 1,
+        ]);
+
         // 8. Booking (bus / taxi) or parcel (logistics) -------------------
         if (isset($c['booking'])) {
-            $db->insert('bookings', [
+            $paid = ($c['booking']['payment'] ?? 'cash') !== 'cash';
+            $bookingId = $db->insert('bookings', [
                 'reference'      => ReferenceGenerator::generate('booking'),
                 'trip_id'        => $tripId,
                 'passenger_id'   => $passengerUserId,
@@ -447,13 +496,31 @@ try {
                 'status'         => 'confirmed',
                 'fare'           => $c['route']['fare'],
                 'currency'       => 'UGX',
-                // Cash: the seat is reserved now and staff record the fare later.
-                'payment_status' => 'unpaid',
+                // Mobile money: paid at booking time. Cash: the seat is
+                // reserved now and staff record the fare when received.
+                'payment_status' => $paid ? 'paid' : 'unpaid',
                 'booking_channel'=> 'admin',
                 'is_simulated'   => 1,
                 'booked_at'      => stamp(),
                 'confirmed_at'   => stamp(),
             ]);
+            if ($paid) {
+                $db->insert('payments', [
+                    'reference'          => ReferenceGenerator::generate('payment'),
+                    'user_id'            => $passengerUserId,
+                    'booking_id'         => $bookingId,
+                    'amount'             => $c['route']['fare'],
+                    'currency'           => 'UGX',
+                    'method'             => $c['booking']['payment'],
+                    'provider'           => 'mock',
+                    'provider_reference' => 'MOCK-' . strtoupper(bin2hex(random_bytes(4))),
+                    'masked_account'     => '0700XXXXXX',
+                    'status'             => 'successful',
+                    'is_mock'            => 1,
+                    'created_at'         => stamp(),
+                    'completed_at'       => stamp(),
+                ]);
+            }
         }
 
         if (isset($c['parcel'])) {
@@ -500,11 +567,26 @@ try {
             'operator'=> $c['operator']['email'],
             'driver'  => $c['driver']['email'],
             'passenger' => $c['passenger']['email'],
-            'authority' => $c['authority']['email'],
             'route'   => $c['route']['code'],
             'vehicle' => $c['vehicle']['registration'],
         ];
         say($c['label'] . ': ' . $c['company']['name']);
+    }
+
+    // Regulator officers (national + districts), each with an authorities row.
+    $createdAuthorities = [];
+    foreach ($authorityPlan as $a) {
+        $userId = $insertUser($a['email'], $a['first'], $a['last'], $a['phone'], 'authority');
+        $db->insert('authorities', [
+            'user_id'       => $userId,
+            'title'         => $a['title'],
+            'region'        => $a['region'],
+            'district'      => $a['district'],
+            'contact_phone' => $a['phone'],
+            'created_at'    => stamp(),
+        ]);
+        $createdAuthorities[] = $a;
+        say('authority: ' . ($a['district'] !== '' ? $a['district'] . ' district' : 'national office'));
     }
 
     $db->commit();
@@ -524,7 +606,7 @@ try {
 // ---------------------------------------------------------------------------
 $counts = [];
 foreach (['users', 'operators', 'drivers', 'passengers', 'vehicles', 'seats', 'routes', 'route_stops',
-          'trips', 'bookings', 'deliveries', 'delivery_tracking'] as $table) {
+          'trips', 'bookings', 'payments', 'deliveries', 'delivery_tracking', 'authorities'] as $table) {
     $counts[$table] = (int) $db->value('SELECT COUNT(*) FROM `' . $table . '`');
 }
 
@@ -536,7 +618,12 @@ foreach ($created as $c) {
     out('    operator   ' . $c['operator']);
     out('    driver     ' . $c['driver']);
     out('    passenger  ' . $c['passenger']);
-    out('    authority  ' . $c['authority']);
+}
+out('');
+out('Regulator (authority) officers:');
+foreach ($createdAuthorities as $a) {
+    out('  ' . str_pad($a['district'] !== '' ? $a['district'] : '(national)', 12)
+        . ' ' . $a['email'] . '  - ' . $a['title']);
 }
 
 out('');
@@ -545,4 +632,5 @@ foreach ($counts as $table => $count) {
     printf("  %-22s %6d\n", $table, $count);
 }
 out('');
-out('Routes depart 10 October 2026; bookings are cash and unpaid until staff record the fare.');
+out('Trips are timed relative to now (the bus is mid-route, taxi and logistics depart shortly).');
+out('The bus booking is paid by mobile money; the taxi booking is cash and unpaid until staff record the fare.');

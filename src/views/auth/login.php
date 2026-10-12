@@ -71,19 +71,22 @@ $oldEmail = (string) Flash::old('email');
                     ['Operator', 'bus.operator@unigo.test', 'building'],
                     ['Driver', 'bus.driver@unigo.test', 'bus'],
                     ['Passenger', 'bus.passenger@unigo.test', 'user'],
-                    ['Authority', 'bus.authority@unigo.test', 'shield'],
                 ],
                 'City Test Taxi Services' => [
                     ['Operator', 'taxi.operator@unigo.test', 'building'],
                     ['Driver', 'taxi.driver@unigo.test', 'car'],
                     ['Passenger', 'taxi.passenger@unigo.test', 'user'],
-                    ['Authority', 'taxi.authority@unigo.test', 'shield'],
                 ],
                 'Swift Test Logistics' => [
                     ['Operator', 'logistics.operator@unigo.test', 'building'],
                     ['Driver', 'logistics.driver@unigo.test', 'truck'],
                     ['Customer', 'logistics.customer@unigo.test', 'package'],
-                    ['Authority', 'logistics.authority@unigo.test', 'shield'],
+                ],
+                'Regulator offices' => [
+                    ['National (MoWT)', 'mowt.authority@unigo.test', 'shield'],
+                    ['Kampala / KCCA', 'kampala.authority@unigo.test', 'shield'],
+                    ['Jinja district', 'jinja.authority@unigo.test', 'shield'],
+                    ['Mukono district', 'mukono.authority@unigo.test', 'shield'],
                 ],
             ];
             ?>

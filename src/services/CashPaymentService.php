@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace App\Services;
 
-use App\Core\{ActivityLog, Auth, AuthorizationException, ConflictException, Database, NotFoundException};
+use App\Core\{ActivityLog, Auth, AuthorizationException, ConflictException, Config, Database, NotFoundException};
 use App\Models\PaymentModel;
 
 /** Cash receipts record an actual handover confirmed by staff, never a gateway charge. */
@@ -13,7 +13,7 @@ final class CashPaymentService
         $db = Database::instance();
         $row = $db->first('SELECT b.*, t.operator_id, t.driver_id AS assigned_driver, t.status AS trip_status FROM bookings b JOIN trips t ON t.id=b.trip_id WHERE b.id=? FOR UPDATE', [$id]);
         if (!$row) throw new NotFoundException('Booking not found.');
-        if ((bool) $row['is_simulated']) throw new ConflictException('Example bookings cannot receive real cash payments.');
+        if ((bool) $row['is_simulated'] && !Config::get('domain.demo_mode', false)) throw new ConflictException('Example bookings cannot receive real cash payments.');
         $allowed = Auth::isAdmin()
             || (Auth::isOperator() && Auth::operatorId() !== null && (int) $row['operator_id'] === Auth::operatorId())
             || (!$refund && Auth::isDriver() && Auth::driverId() !== null && (int) $row['assigned_driver'] === Auth::driverId());
