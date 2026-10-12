@@ -170,6 +170,10 @@ final class StaffController extends Controller
             if ($role === 'driver') {
                 $ids = array_column($db->select('SELECT id FROM vehicles WHERE driver_id = ? OR id IN (SELECT vehicle_id FROM trips WHERE driver_id = ?)', [(int) Auth::driverId(), (int) Auth::driverId()]), 'id');
                 if (!$ids) $ids = [0];
+            } elseif ($role === 'operator') {
+                $opId = (int) Auth::operatorId();
+                $ids = array_column($db->select('SELECT id FROM vehicles WHERE operator_id = ? OR id IN (SELECT vehicle_id FROM trips WHERE operator_id = ?)', [$opId, $opId]), 'id');
+                if (!$ids) $ids = [0];
             } elseif ($district !== null) {
                 $ids = array_column($db->select(
                     "SELECT DISTINCT vehicle_id FROM trips WHERE status IN ('scheduled','boarding','in_transit') AND route_id IN $districtRouteIds",
@@ -186,6 +190,9 @@ final class StaffController extends Controller
             if ($district !== null) {
                 $tripSql .= " AND route_id IN $districtRouteIds";
                 $tripParams = [$district, $district];
+            } elseif ($role === 'operator') {
+                $tripSql .= " AND operator_id = ?";
+                $tripParams = [(int) Auth::operatorId()];
             }
             $vehicleRoute = [];
             foreach ($db->select($tripSql, $tripParams) as $t) {

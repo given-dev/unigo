@@ -52,6 +52,7 @@ $map = [
         ['label' => 'Operations', 'items' => [
             ['path' => '/operator/dashboard', 'label' => 'Dashboard',  'icon' => 'dashboard'],
             ['path' => '/operator/trips',     'label' => 'Trips',      'icon' => 'bus',  'badge' => '/operator/trips'],
+            ['path' => '/operator/tracking',  'label' => 'Live fleet', 'icon' => 'navigation'],
             ['path' => '/operator/vehicles',  'label' => 'Fleet',      'icon' => 'car'],
             ['path' => '/operator/drivers',   'label' => 'Drivers',    'icon' => 'users'],
             ['path' => '/operator/routes',    'label' => 'Routes',     'icon' => 'route'],

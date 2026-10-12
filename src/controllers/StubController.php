@@ -33,6 +33,7 @@ final class StubController extends Controller
 
         // Operator
         '/operator/trips'     => ['Trips', 'Schedule, dispatch and monitor your trips.', 'operator'],
+        '/operator/tracking'  => ['Live fleet', 'Track your vehicles and drivers in real time.', 'operator'],
         '/operator/vehicles'  => ['Fleet', 'Vehicles, seat layouts and compliance.', 'operator'],
         '/operator/drivers'   => ['Drivers', 'Your drivers, licences and assignments.', 'operator'],
         '/operator/routes'    => ['Routes', 'Routes, stops and fare tables.', 'operator'],
