@@ -398,6 +398,12 @@ body.is-locked { overflow: hidden; }
 .demo-item:hover { border-color: var(--primary); background: var(--primary-50); }
 .demo-item__role { font-weight: 650; }
 .demo-item__mail { color: var(--text-muted); font-family: var(--font-mono); font-size: var(--fs-xs); }
+.demo-group { display: grid; gap: var(--sp-2); }
+.demo-group + .demo-group { margin-top: var(--sp-3); }
+.demo-group__title {
+  font-size: var(--fs-xs); font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--text-muted);
+}
 
 /* Password strength meter */
 .pw-strength { display: flex; gap: 4px; margin-top: var(--sp-2); }

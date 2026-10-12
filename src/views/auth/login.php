@@ -61,25 +61,46 @@ $oldEmail = (string) Flash::old('email');
         <p class="demo-panel__title">
             <i class="icon" data-icon="sparkles">sparkles</i> Demo accounts (tap to fill)
         </p>
+        <p class="text-xs text-muted-2" style="margin:-.5rem 0 var(--sp-3)">
+            Password for every account: <code>UniGo@2026</code>
+        </p>
         <div class="demo-list">
             <?php
-            $accounts = [
-                ['Passenger', 'passenger@unigo.test', 'user'],
-                ['Driver', 'driver@unigo.test', 'bus'],
-                ['Operator', 'operator@unigo.test', 'building'],
-                ['Authority', 'authority@unigo.test', 'shield'],
-                ['Administrator', 'admin@unigo.test', 'settings'],
+            $companies = [
+                'Pearl Test Bus Services' => [
+                    ['Operator', 'bus.operator@unigo.test', 'building'],
+                    ['Driver', 'bus.driver@unigo.test', 'bus'],
+                    ['Passenger', 'bus.passenger@unigo.test', 'user'],
+                    ['Authority', 'bus.authority@unigo.test', 'shield'],
+                ],
+                'City Test Taxi Services' => [
+                    ['Operator', 'taxi.operator@unigo.test', 'building'],
+                    ['Driver', 'taxi.driver@unigo.test', 'car'],
+                    ['Passenger', 'taxi.passenger@unigo.test', 'user'],
+                    ['Authority', 'taxi.authority@unigo.test', 'shield'],
+                ],
+                'Swift Test Logistics' => [
+                    ['Operator', 'logistics.operator@unigo.test', 'building'],
+                    ['Driver', 'logistics.driver@unigo.test', 'truck'],
+                    ['Customer', 'logistics.customer@unigo.test', 'package'],
+                    ['Authority', 'logistics.authority@unigo.test', 'shield'],
+                ],
             ];
             ?>
-            <?php foreach ($accounts as [$role, $mail, $icon]): ?>
-                <button class="demo-item" type="button"
-                        data-demo-email="<?= e($mail) ?>" data-demo-password="UniGo@2026">
-                    <span class="flex items-center gap-2">
-                        <i class="icon icon--sm" data-icon="<?= e($icon) ?>"><?= e($icon) ?></i>
-                        <span class="demo-item__role"><?= e($role) ?></span>
-                    </span>
-                    <span class="demo-item__mail"><?= e($mail) ?></span>
-                </button>
+            <?php foreach ($companies as $company => $accounts): ?>
+                <div class="demo-group">
+                    <p class="demo-group__title"><?= e($company) ?></p>
+                    <?php foreach ($accounts as [$role, $mail, $icon]): ?>
+                        <button class="demo-item" type="button"
+                                data-demo-email="<?= e($mail) ?>" data-demo-password="UniGo@2026">
+                            <span class="flex items-center gap-2">
+                                <i class="icon icon--sm" data-icon="<?= e($icon) ?>"><?= e($icon) ?></i>
+                                <span class="demo-item__role"><?= e($role) ?></span>
+                            </span>
+                            <span class="demo-item__mail"><?= e($mail) ?></span>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
             <?php endforeach; ?>
         </div>
     </div>
