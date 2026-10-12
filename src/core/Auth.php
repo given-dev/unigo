@@ -495,7 +495,7 @@ final class Auth
     // ------------------------------------------------------------------
 
     /** Require any authenticated session (JSON aware). */
-    public static function requireLogin(): void
+    public static function requireLogin(string $message = 'Please sign in to continue.'): void
     {
         if (self::check()) {
             return;
@@ -505,7 +505,7 @@ final class Auth
             exit;
         }
         $_SESSION['_intended'] = Request::instance()->uri();
-        Flash::info('Please sign in to continue.');
+        Flash::info($message);
         Http::redirect(Http::url('/login'));
     }
 

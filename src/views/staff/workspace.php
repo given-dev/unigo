@@ -50,6 +50,10 @@ $fields = match ($resource) {
 </div><button class="btn btn--primary mt-3" type="submit">Create</button></form></details>
 <?php endif; ?>
 
+<?php if ($resource === 'operators' && $role === 'admin'): ?>
+<div class="card mb-4"><div class="card__body"><p class="text-sm text-muted-2 mb-0">Admins provision operator accounts. Licensing - approving, rejecting or suspending an operator - is a regulatory act handled by the transport authority in the authority workspace.</p></div></div>
+<?php endif; ?>
+
 <?php if ($board): ?>
 <div class="stat-grid mb-4">
     <?= View::partial('partials/stat-card', ['label' => 'Trips today', 'value' => (string) $board['today'], 'icon' => 'bus', 'tone' => 'primary']) ?>
@@ -120,7 +124,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
 <?php $options=$transitions[$resource][$row['status'] ?? ''] ?? $statuses;
 if ($resource === 'deliveries' && ($row['status'] ?? '') === 'created') $options = ['cancelled'];
-$editable=in_array($role,['admin','operator'],true) || ($role === 'authority' && in_array($resource,['operators','complaints','emergencies'],true)) || ($role === 'driver' && in_array($resource,['trips','deliveries'],true)); ?>
+$editable=($role === 'admin' && $resource !== 'operators') || $role === 'operator' || ($role === 'authority' && in_array($resource,['operators','complaints','emergencies'],true)) || ($role === 'driver' && in_array($resource,['trips','deliveries'],true)); ?>
 <?php if ($editable && $options && $resource !== 'settings'): ?>
 <form method="post" action="<?= e(url($path)) ?>" class="flex gap-2"><?= Csrf::field() ?><input type="hidden" name="id" value="<?= (int)$row['id'] ?>"><select class="select" name="status" aria-label="Status"><?php foreach ($options as $option): ?><option value="<?= e($option) ?>"><?= e(ucwords(str_replace('_',' ',$option))) ?></option><?php endforeach; ?></select><input class="input" name="note" maxlength="500" placeholder="Resolution or note" aria-label="Resolution or note"><button class="btn btn--secondary btn--sm" type="submit">Update</button></form>
 <?php endif; ?>

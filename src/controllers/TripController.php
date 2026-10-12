@@ -33,6 +33,19 @@ final class TripController extends Controller
             ['items' => [], 'paginator' => null]
         );
 
+        $bookedTripIds = [];
+        if (Auth::check() && !empty($result['items'])) {
+            $tripIds = array_map(static fn ($t) => (int) $t['trip_id'], $result['items']);
+            $place   = implode(',', array_fill(0, count($tripIds), '?'));
+            $rows    = $this->safe(static fn () => \App\Core\Database::instance()->select(
+                "SELECT DISTINCT trip_id FROM bookings WHERE passenger_id = ? AND status IN ('pending','confirmed') AND trip_id IN ($place)",
+                array_merge([(int) Auth::id()], $tripIds)
+            ), []);
+            foreach ($rows as $row) {
+                $bookedTripIds[(int) $row['trip_id']] = true;
+            }
+        }
+
         $this->view('trips/search', [
             'title'     => 'Find a trip - ' . app_name(),
             'pageTitle' => 'Find a trip',
@@ -40,6 +53,7 @@ final class TripController extends Controller
             'trips'     => $result['items'] ?? [],
             'paginator' => $result['paginator'] ?? null,
             'filters'   => $filters,
+            'bookedTripIds' => $bookedTripIds,
             'companies' => $this->safe(static fn () => \App\Core\Database::instance()->select("SELECT o.id,o.company_name FROM operators o JOIN users u ON u.id=o.user_id WHERE o.approval_status='approved' AND u.status='active' ORDER BY o.company_name"), []),
         ], Auth::check() ? 'layouts/app' : 'layouts/public');
     }
@@ -47,7 +61,7 @@ final class TripController extends Controller
     /** /trips/{id} - trip detail with a seat picker. */
     public function show(string $id): void
     {
-        $this->requireLogin();
+        $this->requireLogin('Please sign in to book a seat on this trip.');
         $tripId = (int) $id;
 
         $trip = $this->safe(static fn () => (new TripModel())->findDetailed($tripId), null);

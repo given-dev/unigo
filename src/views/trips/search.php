@@ -13,6 +13,7 @@ use App\Core\View;
 $trips     = $trips ?? [];
 $paginator = $paginator ?? null;
 $filters   = $filters ?? [];
+$bookedTripIds = $bookedTripIds ?? [];
 ?>
 <section class="section">
     <h1 class="section__title mb-3">Find your next journey</h1>
@@ -102,7 +103,11 @@ $filters   = $filters ?? [];
                     </div>
                     <div class="card__footer flex items-center justify-between">
                         <span class="fw-700 text-primary"><?= e(money($trip['fare'] ?? 0)) ?></span>
-                        <?php if ($available > 0): ?>
+                        <?php if (!empty($bookedTripIds[(int) $trip['trip_id']])): ?>
+                            <a class="btn btn--ghost btn--sm" href="<?= e(url('/bookings')) ?>">
+                                <i class="icon icon--sm" data-icon="check-circle">check-circle</i> You're booked
+                            </a>
+                        <?php elseif ($available > 0): ?>
                             <a class="btn btn--primary btn--sm" href="<?= e(url('/trips/' . (int) $trip['trip_id'])) ?>">
                                 <i class="icon icon--sm" data-icon="ticket">ticket</i> Book a seat
                             </a>

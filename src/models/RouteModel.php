@@ -271,6 +271,8 @@ final class RouteModel extends BaseModel
         $limit = max(1, min(20, $limit));
         return $this->db->select(
             "SELECT r.*, o.company_name,
+                    (SELECT vi.image_path FROM vehicle_images vi JOIN vehicles v ON v.id = vi.vehicle_id
+                      WHERE v.operator_id = r.operator_id ORDER BY vi.sort_order ASC, vi.id ASC LIMIT 1) AS vehicle_image,
                     (SELECT COUNT(*) FROM trips t WHERE t.route_id = r.id AND t.status = 'scheduled') AS upcoming_trips
              FROM routes r
              LEFT JOIN operators o ON o.id = r.operator_id

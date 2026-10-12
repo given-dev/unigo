@@ -9,6 +9,9 @@
  *   2. City Test Taxi Services   taxi  Kampala -> Entebbe  cash booking, seat 1
  *   3. Swift Test Logistics      truck Kampala -> Mukono   test parcel
  *
+ * It also creates one platform administrator (admin@unigo.test) for user
+ * approvals, settings and network oversight, so every role has a login.
+ *
  * Each company gets an operator, a driver, a passenger/customer and a
  * regulator account, one vehicle (with a seat map), one route (with origin and
  * destination stops), a scheduled trip and the record that proves the flow
@@ -47,6 +50,8 @@ const TEST_PASSWORD = 'UniGo@2026';
 
 /** Accounts created by this seeder (used to detect and clean a previous run). */
 const TEST_EMAILS = [
+    // Platform administrator.
+    'admin@unigo.test',
     'bus.operator@unigo.test', 'bus.driver@unigo.test', 'bus.passenger@unigo.test',
     'taxi.operator@unigo.test', 'taxi.driver@unigo.test', 'taxi.passenger@unigo.test',
     'logistics.operator@unigo.test', 'logistics.driver@unigo.test', 'logistics.customer@unigo.test',
@@ -239,8 +244,8 @@ $plan = [
                         'origin_latitude' => 0.311700, 'origin_longitude' => 32.576700,
                         'destination_latitude' => 0.051200, 'destination_longitude' => 32.462000,
                         'distance_km' => 40.0, 'duration_minutes' => 60, 'fare' => 30000.0, 'colour' => '#059669'],
-        'trip'      => ['departure' => date('Y-m-d H:i:s', strtotime('+30 minutes')),
-                        'arrival'   => date('Y-m-d H:i:s', strtotime('+90 minutes')),
+        'trip'      => ['departure' => date('Y-m-d H:i:s', strtotime('+1 day')),
+                        'arrival'   => date('Y-m-d H:i:s', strtotime('+1 day +1 hour')),
                         'status'    => 'scheduled'],
         'booking'   => ['seat' => '1', 'payment' => 'cash'],
     ],
@@ -260,8 +265,8 @@ $plan = [
                         'origin_latitude' => 0.311700, 'origin_longitude' => 32.576700,
                         'destination_latitude' => 0.353300, 'destination_longitude' => 32.755300,
                         'distance_km' => 21.0, 'duration_minutes' => 90, 'fare' => 15000.0, 'colour' => '#EA580C'],
-        'trip'      => ['departure' => date('Y-m-d H:i:s', strtotime('+45 minutes')),
-                        'arrival'   => date('Y-m-d H:i:s', strtotime('+135 minutes')),
+        'trip'      => ['departure' => date('Y-m-d H:i:s', strtotime('+2 days')),
+                        'arrival'   => date('Y-m-d H:i:s', strtotime('+2 days +135 minutes')),
                         'status'    => 'scheduled'],
         'parcel'    => ['description' => 'Box of exercise books', 'weight_kg' => 10.0, 'declared_value' => 100000.0,
                         'price' => 15000.0, 'is_fragile' => 0, 'pickup' => 'Kampala Central', 'dropoff' => 'Mukono Town',
@@ -294,7 +299,7 @@ $roleId = [];
 foreach ($db->select('SELECT id, slug FROM roles') as $role) {
     $roleId[$role['slug']] = (int) $role['id'];
 }
-foreach (['operator', 'driver', 'passenger', 'authority'] as $needed) {
+foreach (['admin', 'operator', 'driver', 'passenger', 'authority'] as $needed) {
     if (!isset($roleId[$needed])) {
         fwrite(STDERR, "The '$needed' role is missing. Run the installer first.\n");
         exit(1);
@@ -325,6 +330,10 @@ try {
     $db->beginTransaction();
 
     $created = [];
+
+    // Platform administrator (approvals, settings, oversight) ----------------
+    $adminUserId = $insertUser('admin@unigo.test', 'Ruth', 'Nabirye', '+256700000100', 'admin');
+    say('admin: admin@unigo.test');
 
     foreach ($plan as $c) {
         // 1. Accounts -----------------------------------------------------
@@ -612,6 +621,9 @@ foreach (['users', 'operators', 'drivers', 'passengers', 'vehicles', 'seats', 'r
 
 out('');
 out('Test companies created (password for every account: ' . TEST_PASSWORD . ')');
+out('');
+out('Administrator:');
+out('  admin@unigo.test                 - full system administration');
 foreach ($created as $c) {
     out('');
     out('  ' . $c['company'] . '  [' . $c['vehicle'] . ' / ' . $c['route'] . ']');

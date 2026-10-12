@@ -75,6 +75,9 @@ $summary       = $summary ?? ['total_bookings' => 0, 'total_spent' => 0, 'loyalt
         <div class="grid grid-2 gap-3">
             <?php foreach ($upcoming as $trip): ?>
                 <article class="card">
+                    <?php if (!empty($trip['vehicle_image'])): ?>
+                        <img class="card__media" src="<?= e(url('/' . $trip['vehicle_image'])) ?>" alt="<?= e($trip['registration_number'] ?? 'Vehicle') ?> photo" loading="lazy">
+                    <?php endif; ?>
                     <div class="card__body">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-xs text-muted-2"><?= e($trip['trip_code'] ?? '') ?></span>

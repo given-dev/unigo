@@ -666,7 +666,9 @@ final class StaffController extends Controller
                     if ($id === (int) Auth::id()) throw new ValidationException('Change your own profile from Profile.');
                     $this->enum($status,['active','inactive','suspended']);
                     (new UserModel())->setStatus($id,$status,(int) Auth::id());
-                } elseif ($resource === 'operators' && in_array($role,['admin','authority'],true)) {
+                } elseif ($resource === 'operators' && $role === 'admin') {
+                    throw new AuthorizationException('Operator licensing is handled by the transport authority. Admins provision the account; the authority approves, rejects or suspends it.');
+                } elseif ($resource === 'operators' && $role === 'authority') {
                     $this->enum($status,['pending','approved','rejected','suspended']);
                     $db->update('operators',['approval_status'=>$status,'approved_by'=>Auth::id(),'approved_at'=>$status === 'approved' ? date('Y-m-d H:i:s') : null],'id = ?',[$id]);
                 } elseif ($resource === 'vehicles' && in_array($role,['admin','operator'],true)) {

@@ -5,6 +5,8 @@
 declare(strict_types=1);
 
 use App\Core\Config;
+
+$signedIn = (bool) ($signedIn ?? false);
 ?>
 <section class="section">
     <div class="section__head">
@@ -35,6 +37,20 @@ use App\Core\Config;
             </div>
         </article>
     </div>
+
+    <?php if ($signedIn): ?>
+        <article class="card mb-5" style="border-left:4px solid var(--primary)">
+            <div class="card__body flex items-center justify-between gap-3 flex-wrap">
+                <div>
+                    <h3 class="card__title mb-1">Something go wrong on a trip?</h3>
+                    <p class="text-sm text-muted-2 mb-0">File a complaint or report a problem and follow its progress from your account.</p>
+                </div>
+                <a class="btn btn--primary" href="<?= e(url('/complaints')) ?>">
+                    <i class="icon" data-icon="message">message</i> File a complaint
+                </a>
+            </div>
+        </article>
+    <?php endif; ?>
 
     <div class="section__head">
         <div>

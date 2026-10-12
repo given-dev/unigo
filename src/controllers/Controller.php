@@ -55,9 +55,9 @@ abstract class Controller
     }
 
     /** Abort unless a user is signed in. */
-    protected function requireLogin(): void
+    protected function requireLogin(string $message = 'Please sign in to continue.'): void
     {
-        Auth::requireLogin();
+        Auth::requireLogin($message);
     }
 
     /** Abort unless the signed-in user holds one of the given roles. */

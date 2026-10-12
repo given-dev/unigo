@@ -159,7 +159,9 @@ body.is-locked { overflow: hidden; }
 @media (min-width: 768px) {
   .content { padding-top: calc(var(--topbar-h) + var(--sp-6)); padding-bottom: var(--sp-10); }
 
-  /* Desktop: the sidebar becomes a horizontal navigation bar across the top */
+  /* Desktop: the sidebar becomes a slim horizontal navigation bar on top.
+     It scrolls horizontally if a role has many items, so nothing is ever
+     hidden, and the sign-out group is pinned to the right. */
   body.has-sidebar .sidebar {
     inset: 0 0 auto 0;
     width: 100%;
@@ -179,7 +181,7 @@ body.is-locked { overflow: hidden; }
     border-bottom: 1px solid rgba(255, 255, 255, .08);
   }
   .sidebar__brand {
-    height: 100%; padding: 0;
+    height: 100%; padding: 0 var(--sp-2) 0 0;
     border-bottom: 0; flex: none;
     background: none;
   }
@@ -188,16 +190,18 @@ body.is-locked { overflow: hidden; }
     flex: 1; min-width: 0; height: 100%;
     padding: 0;
     overflow-x: auto; overflow-y: hidden;
+    scrollbar-width: none;
   }
-  .sidebar__nav::-webkit-scrollbar { width: 0; height: 5px; }
+  .sidebar__nav::-webkit-scrollbar { width: 0; height: 0; }
   .sidebar__nav form { flex: none; margin: 0; }
   .nav-group {
     display: flex; align-items: center; gap: 2px;
     margin: 0; flex: none;
   }
+  .nav-group:last-child { margin-left: auto; }
   .nav-group__label { display: none; }
   .nav-item {
-    margin: 0; padding: .5rem .85rem;
+    margin: 0; padding: .5rem .8rem;
     flex: none; white-space: nowrap;
     border-radius: var(--r-full);
     font-size: var(--fs-sm);

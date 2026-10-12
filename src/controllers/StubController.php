@@ -52,7 +52,7 @@ final class StubController extends Controller
 
         // Admin
         '/admin/users'        => ['Users', 'All accounts, roles and statuses.', 'admin'],
-        '/admin/operators'    => ['Operators', 'Operator accounts and approval.', 'admin'],
+        '/admin/operators'    => ['Operators', 'Operator accounts and provisioning.', 'admin'],
         '/admin/vehicles'     => ['Vehicles', 'Fleet registry and compliance.', 'admin'],
         '/admin/drivers'      => ['Drivers', 'Driver profiles and verification.', 'admin'],
         '/admin/routes'       => ['Routes', 'Route catalogue and stops.', 'admin'],

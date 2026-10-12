@@ -67,6 +67,9 @@ $oldEmail = (string) Flash::old('email');
         <div class="demo-list">
             <?php
             $companies = [
+                'UniGo administration' => [
+                    ['Administrator', 'admin@unigo.test', 'settings'],
+                ],
                 'Pearl Test Bus Services' => [
                     ['Operator', 'bus.operator@unigo.test', 'building'],
                     ['Driver', 'bus.driver@unigo.test', 'bus'],

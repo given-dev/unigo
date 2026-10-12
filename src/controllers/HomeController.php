@@ -18,7 +18,7 @@ final class HomeController extends Controller
         $this->view('pages/home', [
             'title'    => app_name() . ' - ' . (string) Config::get('app.tagline', ''),
             'bodyClass' => 'public-page',
-            'companies' => $this->safe(static fn () => \App\Core\Database::instance()->select("SELECT o.id,o.company_name,o.description, (SELECT COUNT(*) FROM routes r WHERE r.operator_id=o.id AND r.status='active') AS route_count, (SELECT COUNT(*) FROM trips t WHERE t.operator_id=o.id AND t.status IN ('scheduled','boarding') AND t.departure_time>NOW()) AS upcoming_trips FROM operators o JOIN users u ON u.id=o.user_id WHERE o.approval_status='approved' AND u.status='active' ORDER BY upcoming_trips DESC,o.company_name LIMIT 12"), []),
+            'companies' => $this->safe(static fn () => \App\Core\Database::instance()->select("SELECT o.id,o.company_name,o.description, (SELECT vi.image_path FROM vehicle_images vi JOIN vehicles v ON v.id=vi.vehicle_id WHERE v.operator_id=o.id ORDER BY vi.sort_order ASC,vi.id ASC LIMIT 1) AS vehicle_image, (SELECT COUNT(*) FROM routes r WHERE r.operator_id=o.id AND r.status='active') AS route_count, (SELECT COUNT(*) FROM trips t WHERE t.operator_id=o.id AND t.status IN ('scheduled','boarding') AND t.departure_time>NOW()) AS upcoming_trips FROM operators o JOIN users u ON u.id=o.user_id WHERE o.approval_status='approved' AND u.status='active' ORDER BY upcoming_trips DESC,o.company_name LIMIT 12"), []),
             'routes'   => $this->safe(static fn () => (new RouteModel())->popular(6), []),
             'withChart' => false,
         ], 'layouts/public');
@@ -56,10 +56,14 @@ final class HomeController extends Controller
 
     public function support(): void
     {
+        $signedIn = \App\Core\Auth::check();
         $this->view('pages/support', [
             'title'     => 'Support - ' . app_name(),
+            'pageTitle' => 'Help & support',
+            'pageSub'   => 'Answers to common questions, and how to reach us.',
             'bodyClass' => 'public-page',
-        ], 'layouts/public');
+            'signedIn'  => $signedIn,
+        ], $signedIn ? 'layouts/app' : 'layouts/public');
     }
 
     public function contact(): void
