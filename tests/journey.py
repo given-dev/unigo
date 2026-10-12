@@ -25,9 +25,10 @@ def sql(query,params=()):
  result=subprocess.run([os.environ.get('UNIGO_TEST_PHP','php'),'-r',code,query,json.dumps(params)],check=True,capture_output=True,text=True)
  return json.loads(result.stdout)
 admin=login('admin@unigo.test')
+authority=login('authority@unigo.test')
 company='Test Operator '+KEY
 page=save(admin,'/admin/operators',{'action':'create','first_name':'Test','last_name':'Operator','email':'op'+KEY+'@example.test','phone':'+256780123456','password':'Journey@2026','company_name':company,'license_number':'OP'+KEY})
-save(admin,'/admin/operators',{'id':rowid(page,company),'status':'approved'})
+save(authority,'/authority/operators',{'id':rowid(page,company),'status':'approved'})
 op=login('op'+KEY+'@example.test','Journey@2026')
 route='TEST'+KEY
 page=save(op,'/operator/routes',{'action':'create','route_code':route,'name':'Test Kampala Entebbe','origin_name':'Kampala','destination_name':'Entebbe','base_fare':15000,'duration_minutes':60,'origin_latitude':0.3476,'origin_longitude':32.5825,'destination_latitude':0.0512,'destination_longitude':32.4637})
@@ -40,7 +41,8 @@ page=save(op,'/operator/drivers',{'action':'create','first_name':'Test','last_na
 did=rowid(page,lic)
 future=datetime.datetime.now()+datetime.timedelta(days=1)
 page=save(op,'/operator/trips',{'action':'create','vehicle_id':vid,'route_id':rid,'driver_id':did,'departure_time':future.strftime('%Y-%m-%dT%H:%M'),'arrival_time':(future+datetime.timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M'),'fare':15000})
-tid=rowid(page,str(vid))
+tid=int(sql('SELECT id FROM trips WHERE vehicle_id=? AND route_id=? AND driver_id=? ORDER BY id DESC LIMIT 1',[vid,rid,did])[0]['id'])
+check('?trip='+str(tid) in page,'Created trip appears in the workspace')
 # Verify operator isolation: a seeded vehicle belongs to another operator.
 _,page=req(op,'/operator/vehicles');_,page=req(op,'/operator/vehicles',{'_token':token(page),'id':1,'status':'suspended'})
 check('outside your workspace' in page,'Operator must not update another fleet')

@@ -2,20 +2,20 @@
 declare(strict_types=1);
 $companies=$companies ?? []; $routes=$routes ?? [];
 ?>
-<section class="landing-hero">
+<section class="landing-hero landing-hero--photo">
  <div class="landing-hero__copy">
   <span class="landing-eyebrow">YOUR JOURNEY STARTS HERE</span>
   <h1>Different companies.<br><span>One easy journey.</span></h1>
   <p>Find your route, compare travel companies, and reserve your seat. Travel across Uganda with everything in one place.</p>
-  <a class="btn btn--light" href="#travel-companies">Explore travel companies <i class="icon icon--sm" data-icon="arrow-right">arrow-right</i></a>
- </div>
- <div class="journey-visual" aria-hidden="true">
-  <div class="journey-visual__line"></div>
-  <span class="journey-point journey-point--start">Kampala</span><span class="journey-point journey-point--end">Your next destination</span>
-  <div class="journey-ticket"><span class="landing-eyebrow">LET’S GO PLACES</span><strong>Good journeys.<br>Simple bookings.</strong><div class="journey-ticket__bottom"><span>Search · Choose · Book</span><i class="icon" data-icon="bus">bus</i></div></div>
+  <div class="landing-hero__actions">
+   <a class="btn btn--primary" href="#find-a-trip">Find your next trip <i class="icon icon--sm" data-icon="arrow-right">arrow-right</i></a>
+   <a class="btn btn--light" href="#travel-companies">Explore companies</a>
+  </div>
+  <div class="landing-hero__highlights"><span><i class="icon icon--sm" data-icon="route">route</i> Compare routes</span><span><i class="icon icon--sm" data-icon="ticket">ticket</i> Choose your seat</span></div>
  </div>
 </section>
-<section class="landing-search" aria-label="Find a trip">
+<section class="landing-search" id="find-a-trip" aria-labelledby="trip-search-title">
+ <div class="landing-search__heading"><div><span class="landing-eyebrow">START PLANNING</span><h2 id="trip-search-title">Where are you heading?</h2></div><span class="landing-search__hint">Your next journey starts with a search.</span></div>
  <form method="get" action="<?= e(url('/trips/search')) ?>" class="landing-search__form">
   <div class="field"><label for="home-from">Leaving from</label><input class="input" id="home-from" name="from" placeholder="Departure town" autocomplete="off"></div>
   <div class="field"><label for="home-to">Going to</label><input class="input" id="home-to" name="to" placeholder="Destination town" autocomplete="off"></div>
@@ -34,7 +34,7 @@ $companies=$companies ?? []; $routes=$routes ?? [];
  <?php else: ?><div class="landing-empty">Travel companies will appear here once their accounts are approved. <a href="<?= e(url('/contact')) ?>">Contact us</a> to join UniGo.</div><?php endif; ?>
 </section>
 <section class="landing-section">
- <div class="landing-section__head"><div><span class="landing-eyebrow">FIND YOUR NEXT STOP</span><h2>Explore popular routes.</h2><p>See destinations, operators, and starting fares at a glance.</p></div></div>
+ <div class="landing-section__head"><div><span class="landing-eyebrow">FIND YOUR NEXT STOP</span><h2>Routes worth exploring.</h2><p>See destinations, operators, and starting fares at a glance.</p></div></div>
  <div class="route-grid"><?php foreach($routes as $route): $cover=(string)($route['vehicle_image'] ?? ''); ?>
  <article class="landing-route"><?php if($cover): ?><img class="landing-route__media" src="<?= e(url('/'.$cover)) ?>" alt="<?= e($route['company_name'] ?? 'Operator') ?> vehicle" loading="lazy"><?php endif; ?><div class="landing-route__icon"><i class="icon" data-icon="bus">bus</i></div><p class="landing-route__company"><?= e($route['company_name'] ?? 'Independent operator') ?></p><h3><?= e($route['origin_name']) ?> <span>→</span> <?= e($route['destination_name']) ?></h3><p><?= e(duration_minutes((int)$route['duration_minutes'])) ?> <span>·</span> <?= e((string)$route['distance_km']) ?> km</p><div class="landing-route__bottom"><span><small>Starting fare</small><strong><?= e(money($route['base_fare'])) ?></strong></span><a class="btn btn--secondary btn--sm" href="<?= e(url('/trips/search?'.http_build_query(['from'=>$route['origin_name'],'to'=>$route['destination_name'],'operator_id'=>$route['operator_id']]))) ?>">Find seats</a></div></article>
  <?php endforeach; ?><?php if(!$routes): ?><p class="landing-empty">Published routes will appear here soon.</p><?php endif; ?></div>

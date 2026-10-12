@@ -135,8 +135,9 @@ scenario('Tracking outside the global map limit', function () use ($db): void {
         $vehicle = $db->insert('vehicles', ['registration_number' => $prefix . '-' . $i, 'vehicle_type' => 'bus', 'capacity' => 4, 'status' => 'active']);
         $db->insert('vehicle_locations', ['vehicle_id' => $vehicle, 'latitude' => 1, 'longitude' => 33, 'recorded_at' => '2099-01-01 00:00:00']);
     }
-    $map = (new ReflectionMethod(App\Controllers\TrackingController::class, 'buildMap'))
-        ->invoke(new App\Controllers\TrackingController(), (new TripModel())->findDetailed($f['trip']));
+    $method = new ReflectionMethod(App\Controllers\TrackingController::class, 'buildMap');
+    $method->setAccessible(true);
+    $map = $method->invoke(new App\Controllers\TrackingController(), (new TripModel())->findDetailed($f['trip']));
     check(count($map['vehicles']) === 1 && $map['vehicles'][0]['id'] === $f['vehicle'], 'A large fleet hides the passenger vehicle.');
     check(GpsService::latestPositions([]) === [], 'An empty vehicle scope exposes the entire fleet.');
 });
