@@ -66,42 +66,42 @@ $oldEmail = (string) Flash::old('email');
         </p>
         <div class="demo-list">
             <?php
+            // Demo accounts belong to the project team (Group 7).
             $companies = [
                 'UniGo administration' => [
-                    ['Administrator', 'admin@unigo.test', 'settings'],
+                    ['Administrator', 'Given Tuhaise Biheegu', 'admin@unigo.test', 'settings'],
                 ],
                 'Pearl Test Bus Services' => [
-                    ['Operator', 'bus.operator@unigo.test', 'building'],
-                    ['Driver', 'bus.driver@unigo.test', 'bus'],
-                    ['Passenger', 'bus.passenger@unigo.test', 'user'],
+                    ['Operator', 'Davis Bwambale', 'bus.operator@unigo.test', 'building'],
+                    ['Driver', 'Davis Katawire Atwiine', 'bus.driver@unigo.test', 'bus'],
+                    ['Passenger', 'Juliet Mudulo', 'bus.passenger@unigo.test', 'user'],
                 ],
                 'City Test Taxi Services' => [
-                    ['Operator', 'taxi.operator@unigo.test', 'building'],
-                    ['Driver', 'taxi.driver@unigo.test', 'car'],
-                    ['Passenger', 'taxi.passenger@unigo.test', 'user'],
+                    ['Operator', 'David Oyirwoth', 'taxi.operator@unigo.test', 'building'],
+                    ['Driver', 'Idd Ashiraf Lukwago', 'taxi.driver@unigo.test', 'car'],
+                    ['Passenger', 'Robin Obote', 'taxi.passenger@unigo.test', 'user'],
                 ],
                 'Swift Test Logistics' => [
-                    ['Operator', 'logistics.operator@unigo.test', 'building'],
-                    ['Driver', 'logistics.driver@unigo.test', 'truck'],
-                    ['Customer', 'logistics.customer@unigo.test', 'package'],
+                    ['Operator', 'Jonathan Kizza Ssenoga', 'logistics.operator@unigo.test', 'building'],
+                    ['Driver', 'Joshua Engwaru', 'logistics.driver@unigo.test', 'truck'],
+                    ['Customer', 'Eric Mutaka Wambona', 'logistics.customer@unigo.test', 'package'],
                 ],
                 'Regulator offices' => [
-                    ['National (MoWT)', 'mowt.authority@unigo.test', 'shield'],
-                    ['Kampala / KCCA', 'kampala.authority@unigo.test', 'shield'],
-                    ['Jinja district', 'jinja.authority@unigo.test', 'shield'],
-                    ['Mukono district', 'mukono.authority@unigo.test', 'shield'],
+                    ['National (MoWT)', 'Emmanuel Kisembo', 'mowt.authority@unigo.test', 'shield'],
+                    ['Kampala / KCCA', 'Anold Kitaka', 'kampala.authority@unigo.test', 'shield'],
+                    ['Jinja district', 'Angella Mugisha', 'jinja.authority@unigo.test', 'shield'],
                 ],
             ];
             ?>
             <?php foreach ($companies as $company => $accounts): ?>
                 <div class="demo-group">
                     <p class="demo-group__title"><?= e($company) ?></p>
-                    <?php foreach ($accounts as [$role, $mail, $icon]): ?>
+                    <?php foreach ($accounts as [$role, $name, $mail, $icon]): ?>
                         <button class="demo-item" type="button"
                                 data-demo-email="<?= e($mail) ?>" data-demo-password="UniGo@2026">
                             <span class="flex items-center gap-2">
                                 <i class="icon icon--sm" data-icon="<?= e($icon) ?>"><?= e($icon) ?></i>
-                                <span class="demo-item__role"><?= e($role) ?></span>
+                                <span class="demo-item__role"><?= e($role) ?> · <?= e($name) ?></span>
                             </span>
                             <span class="demo-item__mail"><?= e($mail) ?></span>
                         </button>

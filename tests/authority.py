@@ -14,7 +14,7 @@ def check(value,message):
  assert value,message
  checks+=1
 def token(page):return re.search(r'name="_token" value="([^"]+)"',page).group(1)
-for district,email in [(None,'mowt.authority@unigo.test'),('Kampala','kampala.authority@unigo.test'),('Jinja','jinja.authority@unigo.test'),('Mukono','mukono.authority@unigo.test')]:
+for district,email in [(None,'mowt.authority@unigo.test'),('Kampala','kampala.authority@unigo.test'),('Jinja','jinja.authority@unigo.test')]:
  op=urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
  _,page=req(op,'/login');status,page=req(op,'/login',{'_token':token(page),'email':email,'password':'UniGo@2026'})
  check(status==200 and 'Authority dashboard' in page if district is None else status==200 and 'District dashboard' in page,'Officer login '+email)

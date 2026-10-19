@@ -12,6 +12,10 @@
  * It also creates one platform administrator (admin@unigo.test) for user
  * approvals, settings and network oversight, so every role has a login.
  *
+ * The demo accounts belong to the project team (Group 7): each operator,
+ * driver, passenger and regulator login carries the real name of a group
+ * member so the team can present their own system.
+ *
  * Each company gets an operator, a driver, a passenger/customer and a
  * regulator account, one vehicle (with a seat map), one route (with origin and
  * destination stops), a scheduled trip and the record that proves the flow
@@ -57,6 +61,9 @@ const TEST_EMAILS = [
     'logistics.operator@unigo.test', 'logistics.driver@unigo.test', 'logistics.customer@unigo.test',
     // Regulator officers: one national office plus one officer per district.
     'mowt.authority@unigo.test', 'kampala.authority@unigo.test', 'jinja.authority@unigo.test', 'mukono.authority@unigo.test',
+    // The Mukono officer was retired when the demo accounts moved to the
+    // project team; the address stays in this purge list so --fresh removes
+    // any row left by an earlier run.
     // Legacy per-company regulator accounts from the first demo seed; cleaned on --fresh.
     'bus.authority@unigo.test', 'taxi.authority@unigo.test', 'logistics.authority@unigo.test',
 ];
@@ -211,10 +218,10 @@ $plan = [
         'label'     => 'bus',
         'company'   => ['name' => 'Pearl Test Bus Services', 'licence' => 'TEST-BUS-001', 'address' => 'Kampala, Uganda',
                         'description' => 'Test commuter bus company used for end-to-end UniGo verification.'],
-        'operator'  => ['email' => 'bus.operator@unigo.test',  'first' => 'Daniel', 'last' => 'Kato',    'phone' => '+256700000101'],
-        'driver'    => ['email' => 'bus.driver@unigo.test',    'first' => 'Peter',  'last' => 'Ssemanda','phone' => '+256700000102',
+        'operator'  => ['email' => 'bus.operator@unigo.test',  'first' => 'DAVIS', 'last' => 'BWAMBALE',     'phone' => '+256700000101'],
+        'driver'    => ['email' => 'bus.driver@unigo.test',    'first' => 'DAVIS', 'last' => 'KATAHWIRE ATWIINE', 'phone' => '+256700000102',
                         'licence' => 'TEST-DL-B001', 'licence_type' => 'bus'],
-        'passenger' => ['email' => 'bus.passenger@unigo.test', 'first' => 'Sarah',  'last' => 'Namutebi','phone' => '+256700000103',
+        'passenger' => ['email' => 'bus.passenger@unigo.test', 'first' => 'JULIET', 'last' => 'MUDULO',      'phone' => '+256700000103',
                         'address' => 'Kampala', 'city' => 'Kampala', 'district' => 'Central'],
         'vehicle'   => ['registration' => 'TEST-BUS-01',  'type' => 'bus',   'capacity' => 40,
                         'make' => 'Isuzu', 'model' => 'LT134', 'colour' => 'White'],
@@ -232,10 +239,10 @@ $plan = [
         'label'     => 'taxi',
         'company'   => ['name' => 'City Test Taxi Services', 'licence' => 'TEST-TAXI-001', 'address' => 'Entebbe, Uganda',
                         'description' => 'Test taxi company used for end-to-end UniGo verification.'],
-        'operator'  => ['email' => 'taxi.operator@unigo.test',  'first' => 'Rebecca', 'last' => 'Achieng',   'phone' => '+256700000201'],
-        'driver'    => ['email' => 'taxi.driver@unigo.test',    'first' => 'James',   'last' => 'Okello',   'phone' => '+256700000202',
+        'operator'  => ['email' => 'taxi.operator@unigo.test',  'first' => 'DAVID', 'last' => 'OYIRWOTH',      'phone' => '+256700000201'],
+        'driver'    => ['email' => 'taxi.driver@unigo.test',    'first' => 'IDD', 'last' => 'LUKWAGO ASHIRAF',  'phone' => '+256700000202',
                         'licence' => 'TEST-DL-T001', 'licence_type' => 'psv'],
-        'passenger' => ['email' => 'taxi.passenger@unigo.test', 'first' => 'Brian',   'last' => 'Mugisha',  'phone' => '+256700000203',
+        'passenger' => ['email' => 'taxi.passenger@unigo.test', 'first' => 'ROBIN', 'last' => 'OBOTE',          'phone' => '+256700000203',
                         'address' => 'Entebbe', 'city' => 'Entebbe', 'district' => 'Wakiso'],
         'vehicle'   => ['registration' => 'TEST-TAXI-01', 'type' => 'taxi',  'capacity' => 4,
                         'make' => 'Toyota', 'model' => 'Hiace', 'colour' => 'Yellow'],
@@ -253,10 +260,10 @@ $plan = [
         'label'     => 'logistics',
         'company'   => ['name' => 'Swift Test Logistics', 'licence' => 'TEST-LOG-001', 'address' => 'Mukono, Uganda',
                         'description' => 'Test logistics company used for end-to-end UniGo parcel verification.'],
-        'operator'  => ['email' => 'logistics.operator@unigo.test',  'first' => 'Michael', 'last' => 'Waiswa', 'phone' => '+256700000301'],
-        'driver'    => ['email' => 'logistics.driver@unigo.test',    'first' => 'Joseph',  'last' => 'Ouma',   'phone' => '+256700000302',
+        'operator'  => ['email' => 'logistics.operator@unigo.test',  'first' => 'JONATHAN', 'last' => 'KIZZA SSENOGA', 'phone' => '+256700000301'],
+        'driver'    => ['email' => 'logistics.driver@unigo.test',    'first' => 'JOSHUA', 'last' => 'ENGWARU',        'phone' => '+256700000302',
                         'licence' => 'TEST-DL-L001', 'licence_type' => 'heavy'],
-        'passenger' => ['email' => 'logistics.customer@unigo.test',  'first' => 'Agnes',   'last' => 'Nakato', 'phone' => '+256700000303',
+        'passenger' => ['email' => 'logistics.customer@unigo.test',  'first' => 'ERIC', 'last' => 'WAMBONA MUTAKA',  'phone' => '+256700000303',
                         'address' => 'Mukono', 'city' => 'Mukono', 'district' => 'Mukono'],
         'vehicle'   => ['registration' => 'TEST-TRK-01',  'type' => 'truck', 'capacity' => 2,
                         'make' => 'Isuzu', 'model' => 'FVR', 'colour' => 'Blue'],
@@ -282,14 +289,12 @@ $plan = [
 // scopes the officer to routes that start or end in that district.
 // ---------------------------------------------------------------------------
 $authorityPlan = [
-    ['email' => 'mowt.authority@unigo.test',    'first' => 'Moses',  'last' => 'Waiswa',   'phone' => '+256700000401',
+    ['email' => 'mowt.authority@unigo.test',    'first' => 'EMMANUEL', 'last' => 'KISEMBO',          'phone' => '+256700000401',
      'title' => 'Ministry of Works and Transport', 'region' => 'National', 'district' => ''],
-    ['email' => 'kampala.authority@unigo.test', 'first' => 'Alice',  'last' => 'Nakimuli', 'phone' => '+256700000402',
+    ['email' => 'kampala.authority@unigo.test', 'first' => 'ANOLD', 'last' => 'KITAKA',             'phone' => '+256700000402',
      'title' => 'Kampala Capital City Authority', 'region' => 'Central', 'district' => 'Kampala'],
-    ['email' => 'jinja.authority@unigo.test',   'first' => 'Robert', 'last' => 'Mwebe',    'phone' => '+256700000403',
+    ['email' => 'jinja.authority@unigo.test',   'first' => 'ANGELLA', 'last' => 'MUGISHA',          'phone' => '+256700000403',
      'title' => 'Jinja District Transport Officer', 'region' => 'Eastern', 'district' => 'Jinja'],
-    ['email' => 'mukono.authority@unigo.test',  'first' => 'Sarah',  'last' => 'Kirabo',   'phone' => '+256700000404',
-     'title' => 'Mukono District Transport Officer', 'region' => 'Central', 'district' => 'Mukono'],
 ];
 
 // ---------------------------------------------------------------------------
@@ -332,7 +337,7 @@ try {
     $created = [];
 
     // Platform administrator (approvals, settings, oversight) ----------------
-    $adminUserId = $insertUser('admin@unigo.test', 'Ruth', 'Nabirye', '+256700000100', 'admin');
+    $adminUserId = $insertUser('admin@unigo.test', 'GIVEN', 'TUHAISE BIHEEGU', '+256700000100', 'admin');
     say('admin: admin@unigo.test');
 
     foreach ($plan as $c) {

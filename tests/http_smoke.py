@@ -22,7 +22,7 @@ for path in ['/','/about','/contact','/schedule','/trips/search','/login','/regi
  status,html=request(public,path);ok(status==200 and 'Fatal error' not in html,f'{path}: {status}')
 status,home=request(public,'/');ok('Travel companies, together.' in home and 'Kampala City Bus Services' in home,'Landing page must display seeded companies')
 status,html=request(public,'/api/notifications/unread-count');ok(status==401,f'API must require authentication: {status} {html[:200]}')
-pages=re.findall(r"'(/(?:admin|operator|authority|driver)/[^']+)'\s*=>",open('src/controllers/StubController.php').read())
+pages=re.findall(r"'(/(?:admin|operator|authority|driver)/[^']+)'\s*=>",open('src/controllers/StaffController.php').read())
 for role in ['passenger','admin','operator','authority','driver']:
  op=client();_,html=request(op,'/login')
  status,html=request(op,'/login',{'_token':token(html),'email':role+'@unigo.test','password':'UniGo@2026'})

@@ -177,24 +177,25 @@ the sign-in page lists these accounts and fills the form when tapped.
 
 | Role | Email | Belongs to |
 |---|---|---|
-| Administrator | `admin@unigo.test` | Platform administration |
-| Operator | `bus.operator@unigo.test` | Pearl Test Bus Services (bus) |
-| Driver | `bus.driver@unigo.test` | Pearl Test Bus Services |
-| Passenger | `bus.passenger@unigo.test` | Pearl Test Bus Services |
-| Operator | `taxi.operator@unigo.test` | City Test Taxi Services (taxi) |
-| Driver | `taxi.driver@unigo.test` | City Test Taxi Services |
-| Passenger | `taxi.passenger@unigo.test` | City Test Taxi Services |
-| Operator | `logistics.operator@unigo.test` | Swift Test Logistics (truck) |
-| Driver | `logistics.driver@unigo.test` | Swift Test Logistics |
-| Customer | `logistics.customer@unigo.test` | Swift Test Logistics |
-| Authority (national) | `mowt.authority@unigo.test` | Ministry of Works and Transport |
-| Authority | `kampala.authority@unigo.test` | Kampala Capital City Authority |
-| Authority | `jinja.authority@unigo.test` | Jinja District Transport Officer |
-| Authority | `mukono.authority@unigo.test` | Mukono District Transport Officer |
+| Administrator | `admin@unigo.test` | Given Tuhaise Biheegu (team lead) |
+| Operator | `bus.operator@unigo.test` | Davis Bwambale — Pearl Test Bus Services (bus) |
+| Driver | `bus.driver@unigo.test` | Davis Katawire Atwiine — Pearl Test Bus Services |
+| Passenger | `bus.passenger@unigo.test` | Juliet Mudulo — Pearl Test Bus Services |
+| Operator | `taxi.operator@unigo.test` | David Oyirwoth — City Test Taxi Services (taxi) |
+| Driver | `taxi.driver@unigo.test` | Idd Ashiraf Lukwago — City Test Taxi Services |
+| Passenger | `taxi.passenger@unigo.test` | Robin Obote — City Test Taxi Services |
+| Operator | `logistics.operator@unigo.test` | Jonathan Kizza Ssenoga — Swift Test Logistics (truck) |
+| Driver | `logistics.driver@unigo.test` | Joshua Engwaru — Swift Test Logistics |
+| Customer | `logistics.customer@unigo.test` | Eric Mutaka Wambona — Swift Test Logistics |
+| Authority (national) | `mowt.authority@unigo.test` | Emmanuel Kisembo — Ministry of Works and Transport |
+| Authority | `kampala.authority@unigo.test` | Anold Kitaka — Kampala Capital City Authority |
+| Authority | `jinja.authority@unigo.test` | Angella Mugisha — Jinja District Transport Officer |
 
-That is the complete login set for this demo database — 14 accounts and nothing
-else. The national authority officer sees the whole network; the district
-officers are scoped to routes that start or end in their district.
+The demo logins belong to the project team (Group 7) — each member presents
+their own role. That is the complete login set for this demo database — 13
+accounts and nothing else. The national authority officer sees the whole
+network; the district officers are scoped to routes that start or end in their
+district.
 
 ---
 
