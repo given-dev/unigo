@@ -19,7 +19,6 @@ use App\Controllers\HomeController;
 use App\Controllers\NotificationController;
 use App\Controllers\PaymentController;
 use App\Controllers\ProfileController;
-use App\Controllers\StubController;
 use App\Controllers\StaffController;
 use App\Controllers\TrackingController;
 use App\Controllers\TripController;
@@ -116,9 +115,9 @@ $router->post('/emergency', [EmergencyController::class, 'store']);
 $router->get('/passenger/emergency', [EmergencyController::class, 'create']);
 
 // ---------------------------------------------------------------------------
-// Staff workspace placeholders (single source of truth: StubController::PAGES)
+// Staff workspaces (single source of truth: StaffController::PAGES)
 // ---------------------------------------------------------------------------
-foreach (array_keys(StubController::PAGES) as $staffPath) {
+foreach (array_keys(StaffController::PAGES) as $staffPath) {
     $router->get($staffPath, [StaffController::class, 'index']);
     $router->post($staffPath, [StaffController::class, 'save']);
 }

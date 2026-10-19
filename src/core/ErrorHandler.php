@@ -84,21 +84,23 @@ final class ErrorHandler
             exit(1);
         }
 
+        [$heading, $message, $status] = self::friendly($e);
+
         if ($isApi) {
             Response::error(
-                'Something went wrong. Please try again.',
-                500,
+                $message,
+                $status,
                 Config::isDebug() ? ['exception' => get_class($e), 'message' => $e->getMessage(), 'line' => $e->getLine()] : []
             )->send();
             return;
         }
 
-        Http::status(500);
+        Http::status($status);
         View::render('errors/error', [
-            'title'   => 'Something went wrong',
-            'code'    => 500,
-            'heading' => 'Something went wrong',
-            'message' => 'We could not complete your request. The issue has been logged and our team will review it.',
+            'title'   => $heading,
+            'code'    => $status,
+            'heading' => $heading,
+            'message' => $message,
             'debug'   => Config::isDebug() ? $e->getMessage() . ' @ ' . $e->getFile() . ':' . $e->getLine() : null,
         ]);
     }
